@@ -63,6 +63,7 @@ src/
   eda.py               figures + tables
 tests/                 pytest sanity checks (cleaning, split leakage, subgroup)
 docs/
+  plan.md              4-week plan + owners
   data_dictionary.md   variable table for the report
   subgroup_definition.md
   week1_findings.md
