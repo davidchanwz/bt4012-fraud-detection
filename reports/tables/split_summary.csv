@@ -1,0 +1,4 @@
+split,steps,n_days,n_txns,n_fraud,fraud_rate,n_customers,n_merchants,n_categories_with_fraud
+train,0-119,120,374914,4800,0.0128,4111,50,12
+val,120-149,30,108423,1200,0.01107,4070,50,12
+test,150-179,30,111306,1200,0.01078,4079,49,12

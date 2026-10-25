@@ -1,0 +1,4 @@
+split,n_fraud,normal_looking_fraud,pct_of_fraud,normal_looking_legit,strict_normal_looking_fraud,strict_pct_of_fraud
+train,4800,1478,30.8,351610,547,11.4
+val,1200,395,32.9,101847,149,12.4
+test,1200,400,33.3,104736,164,13.7

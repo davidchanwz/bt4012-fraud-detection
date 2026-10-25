@@ -1,0 +1,3 @@
+split,customers_not_in_train,txns_from_unseen_customers,merchants_not_in_train,txns_at_unseen_merchants
+val,1,2,0,0
+test,1,3,0,0
