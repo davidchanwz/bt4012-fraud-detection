@@ -1,7 +1,9 @@
 # Project plan (4 weeks)
 
-Deadline: **Fri 20 Nov 2026, 23:59**. Due: `report07.pdf`, `presentation07.pptx`, `video07.mp4`.
+Deadline: **Fri 20 Nov 2026, 23:59**. Due: `report07.pdf` (8–12 pages excl. appendices/refs, with the GitHub URL), `presentation07.pptx`, `video07.mp4` (≤15 min, everyone speaks).
 Results get frozen a week before the deadline, so the report and video aren't written around numbers that keep changing.
+
+Key dates: kickoff **Sat 31 Oct** · checkpoint **Sun 8 Nov** · freeze **Sun 15 Nov** · record **Wed 18 Nov** · submit **Fri 20 Nov by midday**.
 
 ## Week 1 · Mon 26 Oct – Sun 1 Nov: Data and setup ✅ (done 25 Oct)
 - [x] Repo structure, README, uv environment (`pyproject.toml` + `uv.lock`, Python 3.12)
@@ -14,45 +16,114 @@ Results get frozen a week before the deadline, so the report and video aren't wr
 
 Findings: `docs/week1_findings.md`
 
+### What week 1 means for the rest
+- Amount and category already separate fraud well, so the overall gain from graph features may be small. The headline result has to come from the subgroup and review-budget metrics, with confidence intervals. A small or null gain is still a result if we report it honestly.
+- Past-label features (merchant fraud rate, customer prior fraud) are the main leakage risk. They go in their own group (G5) with a label delay, so the ablation can separate "graph structure" from "past labels".
+- Test has 111,306 rows and 1,200 fraud. A 1% budget is 1,113 alerts, so the **best possible recall@1% is 92.75%**. Print this ceiling next to every recall@1% number. 1% of ~3,700 txns/day is about 37 reviews a day.
+
+## Roles
+Each owner writes up their own part and presents it. That keeps commits and speaking time balanced for the peer evaluation.
+
+| Role | Owner | Code | Report | Video |
+|---|---|---|---|---|
+| R1 Data & delivery | David | `src/run_all.py`, README, business-integration numbers | editor; §1, §2, §4.5, §5 | problem + data (~3:10) |
+| R2 Graph features | | `src/features/graph.py`, `tests/test_features.py`, ablation | §3.1–3.2, ablation in §4 | features + leakage (~3:10) |
+| R3 Models | | `src/models/train.py`, interpretation, case studies | §3.3, §4.1 | models + main results (~3:30) |
+| R4 Evaluation | | `src/eval/metrics.py`, subgroup, bootstrap | §3.4, §4.2–4.4 | subgroup, workload, conclusion (~3:40) |
+
+## Kickoff · Sat 31 Oct – Sun 1 Nov
+Decisions (recommendation in bold; write the answers here):
+- [ ] Add LightGBM as a third model? **Yes.** It's the standard strong tabular baseline, cheap on CPU, and makes ablation runs fast. `uv add lightgbm`.
+- [ ] Label delay for G5 features? **7 days as the main setting, 1 day as a sensitivity check.**
+- [ ] Feedforward NN: sklearn or PyTorch? **sklearn `MLPClassifier`** with early stopping. Handle imbalance by undersampling legit rows in train (same sample for both feature sets).
+- [ ] Training protocol? **Train on train, tune on val, score test once at freeze.** F1 threshold picked on val, applied to test unchanged. No refit on train+val.
+- [ ] Fill in the role owners above.
+
+File contracts, so everyone can work in parallel:
+- `src/features/graph.py` → `data/processed/features_graph.parquet`: one row per `txn_id`, columns prefixed `g1_` … `g5_`
+- `src/models/train.py --model {lr,mlp,lgbm} --features {txn,txn_graph,...}` → `reports/scores/{model}_{features}_{split}.parquet` with `txn_id, score`
+- `src/eval/metrics.py` reads score files → `reports/tables/results_*.csv`. Evaluation never retrains.
+
+Also: everyone runs the week 1 pipeline on their own machine; create `docs/genai_log.md`.
+
 ## Week 2 · Mon 2 Nov – Sun 8 Nov: Features and baselines
-- [ ] Leakage-safe graph / behavioural features: frequency, unique counterparties, repeat customer–merchant pairs, historical volume, velocity. Each transaction only uses steps **before** its own step (same-step rows have no reliable order).
-- [ ] Merchant fraud-rate feature: only use labels known at that time (see open decision below)
-- [ ] Test that no feature uses same-step or future data
-- [ ] Transaction-only baselines: logistic regression, feedforward NN (+ LightGBM if we add it). Tune on val.
-- [ ] One shared evaluation function for every model: PR-AUC, precision, recall, F1, recall at 1% and 2% review budget
-- **Checkpoint Sun 8 Nov:** baseline results table and feature pipeline merged
+
+### Evaluation harness (R4) · by Tue 3 Nov
+- [ ] PR-AUC (primary), ROC-AUC (secondary)
+- [ ] Precision / recall / F1 at the val-chosen threshold
+- [ ] Recall, precision, false positives at 1% and 2% budget (+ ceiling); fraud amount caught at each budget
+- [ ] All of the above on `normal_looking` and `normal_looking_strict` subsets
+- [ ] Stratified bootstrap CIs (1,000 resamples) and a **paired** bootstrap for txn vs txn+graph on the same test rows
+- [ ] Unit tests on toy scores
+
+### Graph / behavioural features (R2) · v1 Thu 5 Nov, full Sat 7 Nov
+Each transaction on day *t* uses only days **before** *t* (same-step rows have no reliable order). Compute on the full cleaned data in step order: per-step aggregates, then cumulative sum shifted by one step.
+
+| Group | Features | Ships in |
+|---|---|---|
+| G1 customer history | prior txn count; 7-day count (velocity); mean/std past amount; amount z-score vs own history; days since last txn; unique merchants / categories so far | v1 |
+| G2 merchant history | prior txn count; unique customers (degree); 7-day volume; mean past amount; amount vs merchant mean | full |
+| G3 customer–merchant edge | prior pair count; first-time-pair flag; days since pair last transacted; share of customer's history at this merchant | v1 |
+| G4 network structure (stretch) | avg degree of customer's past merchants; weekly-snapshot PageRank | if time |
+| G5 past labels | smoothed merchant fraud rate; customer prior fraud count; only labels older than the delay | full |
+
+Leakage tests (`tests/test_features.py`):
+- [ ] Truncation: recompute using only days ≤ *t*; rows on day *t* must match the full-data result exactly
+- [ ] Label shuffle: shuffle labels inside the delay window and after; G5 must not change
+- [ ] Day 0: every row on step 0 has zero history
+- [ ] One-line definition of every feature in `docs/data_dictionary.md`
+
+### Baselines (R3) · by Fri 6 Nov
+- [ ] LR (`class_weight="balanced"`, grid over C), MLP (5 seeds, mean ± sd), LightGBM (`scale_pos_weight`)
+- [ ] Tune by val PR-AUC. Same grids get reused for the graph versions
+- [ ] Row-level scores for val and test; hyperparameters to `reports/tables/hyperparams.csv`
+- [ ] Smoke-test a txn + features-v1 run on Thu 5 Nov
+
+### Reproducibility (R1)
+- [ ] `python -m src.run_all` so the whole pipeline runs without bash (Windows users, markers)
+
+**Checkpoint Sun 8 Nov:** baseline results table reviewed, feature pipeline merged, all tests green.
 
 ## Week 3 · Mon 9 Nov – Sun 15 Nov: Main experiments, then freeze
-- [ ] Graph-augmented versions of the same models
-- [ ] Ablation: drop one feature group at a time
-- [ ] Subgroup analysis on normal-looking fraud (primary + strict). Bootstrap CIs for the strict one (only 164 test cases)
-- [ ] Check how many false positives each model sends to the review budget
-- [ ] Start the report in parallel: Problem, Data, Methodology don't depend on final numbers
-- **Freeze results Sun 15 Nov.** After this, bug fixes only.
+- [ ] Graph-augmented runs for all 3 models (R3, Mon 9 – Tue 10)
+- [ ] Main table: 3 models × {txn, txn+graph} on test with CIs and paired differences (R4)
+- [ ] Ablation: all minus one group at a time, plus label-free (G1–G4) vs labels-only (G5). Use LR + LightGBM (R2)
+- [ ] Label delay: 7-day vs 1-day G5 (R2)
+- [ ] Subgroup: recall at threshold and at budget on primary (400 test cases) and strict (164), bootstrap CIs, 90th-percentile sensitivity check (R4)
+- [ ] False-positive burden: legit rows in each 1% / 2% queue, and how many are normal-looking (R4)
+- [ ] Interpretation: LR coefficients, SHAP for LightGBM; 3–4 case studies of fraud caught only by the graph model (R3)
+- [ ] Business integration: daily alert volume, analyst time (stated minutes-per-review assumption), fraud value caught (R1)
+- [ ] Report drafts in parallel: §1–2 by Wed 11 (R1); §3.1–3.4 by Fri 13 (R2, R3, R4)
+- [ ] Slide template + storyline outline by Sat 14 (R1)
+- **Freeze results Sun 15 Nov.** Tag `v-results`. After this, bug fixes only. Every number in the report comes from `reports/tables/`.
 
 ## Week 4 · Mon 16 Nov – Fri 20 Nov: Write-up and recording
-- **Mon 16:** Results + Conclusion sections, final figures
-- **Tue 17:** finish slides. Full report review: 8–12 pages, GenAI acknowledgement, GitHub link
-- **Wed 18:** rehearse, then record. Aim for 13–14 min (limit is 15). Everyone speaks. Title + all names on screen at the start for up to ~8 s.
-- **Thu 19:** buffer for a re-record. Polish the README. Fresh-clone reproducibility test (`uv sync && ./run_week1.sh` etc.)
-- **Fri 20:** submit early in the day, not at 23:59. Check the file names (a wrong name costs 2% of that component).
+- **Mon 16:** §4.1 (R3), §4.2–4.4 (R4), §4.5 + final figures (R1)
+- **Tue 17:** finish slides. Full report review: 8–12 pages, GenAI acknowledgement, GitHub link. Each person reads one other section.
+- **Wed 18:** one full rehearsal, then record by segment. Aim for 13:30 (limit is 15). Title + all names on screen at the start for ~8 s.
+- **Thu 19:** buffer for a re-record. Polish the README. Fresh-clone reproducibility test on a second laptop.
+- **Fri 20:** submit by midday, not at 23:59. Check the file names (a wrong name costs 2% of that component) and that the repo is accessible.
 
-## Suggested split (4 people)
-1. Data, EDA, README / reproducibility
-2. Graph feature engineering + leakage checks
-3. Baseline + graph-augmented model training
-4. Evaluation framework, ablation, subgroup analysis
+## Report outline (aim for 11 pages)
+| Section | Pages | Author |
+|---|---|---|
+| 1 Problem | 1 | R1 |
+| 2 Data (variable table, EDA, split, simulation artifacts) | 1.5 | R1 |
+| 3.1–3.2 Preprocessing, graph features, leakage controls | 1.5 | R2 |
+| 3.3 Models and justification | 1 | R3 |
+| 3.4 Evaluation design | 0.5 | R4 |
+| 4.1 Main results | 1.5 | R3 |
+| 4.2–4.4 Ablation, subgroup, FP burden, interpretation | 2 | R4, R2 |
+| 4.5 Business use | 0.5 | R1 |
+| 5 Conclusion and limitations | 0.5 | R1 + all |
 
-Everyone writes up their own part and presents it. That keeps commits and speaking time balanced for the peer evaluation.
+Appendix: feature definitions, hyperparameters, extra figures, GenAI acknowledgement.
 
-| Area | Owner |
-|---|---|
-| Data / EDA / reproducibility | David |
-| Graph features | |
-| Models | |
-| Evaluation / ablation / subgroups | |
-
-## Open decisions (settle before week 2 work starts)
-- [ ] Add LightGBM as a third model? It's the standard strong baseline on tabular fraud data, and markers may ask why it's missing. If not, justify it in the report.
-- [ ] Label delay for the merchant fraud-rate feature: assume labels are known the next day, or add a delay (e.g. 7 days) to be more realistic?
-- [ ] Feedforward NN: sklearn `MLPClassifier` or PyTorch? (Add with `uv add`.)
+## Working agreements
+- Don't change the split boundaries in `src/config.py` or the subgroup definition. If one has to change, the report says so and why.
+- Add packages with `uv add` only; commit `pyproject.toml`, `uv.lock` and a re-exported `requirements.txt` together.
+- Results come from scripts, not notebook cells.
+- One branch per work package; merge through a PR reviewed by one other person.
+- Written standup in the group chat Mon / Wed / Fri (done, next, blocked); 30-min call each Sunday.
+- Log GenAI help in `docs/genai_log.md` as you go. Everyone must be able to explain every part of the submission.
+- Out of scope: GNNs (future work only). G4 is the only stretch item.
