@@ -1,0 +1,24 @@
+feature,group,legit_mean,fraud_mean
+g1_cust_n_prev,customer history,51.7037,30.5254
+g1_cust_is_new,customer history,0.0106,0.049
+g1_cust_n_7d,customer history,6.2643,4.6306
+g1_cust_amt_mean,customer history,38.4775,238.1114
+g1_cust_amt_std,customer history,44.0037,314.1672
+g1_cust_amt_z,customer history,-0.0014,2.4205
+g1_cust_days_since_last,customer history,1.5871,5.2467
+g1_cust_n_merchants,customer history,5.7407,7.9871
+g1_cust_n_categories,customer history,4.5277,5.6656
+g2_merch_n_prev,merchant history,68462.0818,743.9763
+g2_merch_n_7d,merchant history,8337.7245,79.6846
+g2_merch_amt_mean,merchant history,33.4239,367.4272
+g2_merch_amt_z,merchant history,-0.0115,0.9306
+g2_merch_log_amt_ratio,merchant history,-0.2966,0.2337
+g2_merch_n_customers,merchant history,2355.0989,450.18
+g3_pair_n_prev,customer-merchant edge,27.9438,1.7265
+g3_pair_is_new,customer-merchant edge,0.0915,0.5908
+g3_pair_days_since_last,customer-merchant edge,4.9142,23.5304
+g3_pair_share,customer-merchant edge,0.563,0.0702
+g5_cust_fraud_n,past labels,0.3869,10.1006
+g5_cust_fraud_rate,past labels,0.0113,0.2135
+g5_merch_fraud_rate,past labels,0.0049,0.4139
+g5_pair_fraud_n,past labels,0.0019,1.3035
