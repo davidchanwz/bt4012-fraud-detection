@@ -11,6 +11,11 @@ TABLE_DIR = ROOT / "reports" / "tables"
 
 RAW_FILE = RAW_DIR / "bs140513_032310.csv"
 CLEAN_FILE = PROCESSED_DIR / "banksim_clean.parquet"
+GRAPH_FILE = PROCESSED_DIR / "features_graph.parquet"
+
+# Days before a transaction's fraud label is known (used by the g5_ features).
+# A label from day s can be used from day s + LABEL_DELAY onwards.
+LABEL_DELAY = 7
 
 # The original Kaggle dataset (ealaxi/banksim1) needs a login, so download.py
 # pulls a public GitHub mirror. We checked the file against the expected

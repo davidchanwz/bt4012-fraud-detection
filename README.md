@@ -34,6 +34,7 @@ uv run python -m src.data.download   # gets data/raw/bs140513_032310.csv (48 MB)
 uv run python -m src.data.clean      # -> data/processed/banksim_clean.parquet
 uv run python -m src.data.split      # -> data/processed/splits/{train,val,test}.parquet
 uv run python -m src.eda             # -> reports/figures/*.png, reports/tables/*.csv
+uv run python -m src.features.graph  # -> data/processed/features_graph.parquet (graph features, week 2)
 uv run pytest -q                     # sanity checks
 uv run jupyter lab                   # notebooks
 ```
@@ -60,8 +61,11 @@ src/
   data/split.py        chronological split + summary tables
   features/encode.py   transaction-only features (one-hot + scaled amount), fit on train
   features/subgroup.py "normal-looking fraud" flags (fixed in week 1)
+  features/graph.py    leakage-safe graph / history features (g1 customer, g2 merchant,
+                       g3 customer-merchant edge, g5 past labels) + GraphScaler
   eda.py               figures + tables
-tests/                 pytest sanity checks (cleaning, split leakage, subgroup)
+tests/                 pytest sanity checks (cleaning, split leakage, subgroup,
+                       graph-feature leakage)
 docs/
   plan.md              4-week plan + owners
   data_dictionary.md   variable table for the report
