@@ -27,17 +27,17 @@ Each owner writes up their own part and presents it. That keeps commits and spea
 | Role | Owner | Code | Report | Video |
 |---|---|---|---|---|
 | R1 Data & delivery | David | `src/run_all.py`, README, business-integration numbers | editor; §1, §2, §4.5, §5 | problem + data (~3:10) |
-| R2 Graph features | | `src/features/graph.py`, `tests/test_features.py`, ablation | §3.1–3.2, ablation in §4 | features + leakage (~3:10) |
-| R3 Models | | `src/models/train.py`, interpretation, case studies | §3.3, §4.1 | models + main results (~3:30) |
-| R4 Evaluation | | `src/eval/metrics.py`, subgroup, bootstrap | §3.4, §4.2–4.4 | subgroup, workload, conclusion (~3:40) |
+| R2 Graph features | Jayden | `src/features/graph.py`, `tests/test_features.py`, ablation | §3.1–3.2, ablation in §4 | features + leakage (~3:10) |
+| R3 Models | Aayush | `src/models/train.py`, interpretation, case studies | §3.3, §4.1 | models + main results (~3:30) |
+| R4 Evaluation | Rayson | `src/eval/metrics.py`, subgroup, bootstrap | §3.4, §4.2–4.4 | subgroup, workload, conclusion (~3:40) |
 
 ## Kickoff · Sat 31 Oct – Sun 1 Nov
-Decisions (recommendation in bold; write the answers here):
-- [ ] Add LightGBM as a third model? **Yes.** It's the standard strong tabular baseline, cheap on CPU, and makes ablation runs fast. `uv add lightgbm`.
-- [ ] Label delay for G5 features? **7 days as the main setting, 1 day as a sensitivity check.**
-- [ ] Feedforward NN: sklearn or PyTorch? **sklearn `MLPClassifier`** with early stopping. Handle imbalance by undersampling legit rows in train (same sample for both feature sets).
-- [ ] Training protocol? **Train on train, tune on val, score test once at freeze.** F1 threshold picked on val, applied to test unchanged. No refit on train+val.
-- [ ] Fill in the role owners above.
+Decisions (all agreed 1 Nov 2026 on the recommended answers in bold):
+- [x] Add LightGBM as a third model? **Yes.** It's the standard strong tabular baseline, cheap on CPU, and makes ablation runs fast. `uv add lightgbm`.
+- [x] Label delay for G5 features? **7 days as the main setting, 1 day as a sensitivity check.**
+- [x] Feedforward NN: sklearn or PyTorch? **sklearn `MLPClassifier`** with early stopping. Handle imbalance by undersampling legit rows in train (same sample for both feature sets).
+- [x] Training protocol? **Train on train, tune on val, score test once at freeze.** F1 threshold picked on val, applied to test unchanged. No refit on train+val.
+- [x] Fill in the role owners above.
 
 File contracts, so everyone can work in parallel:
 - `src/features/graph.py` → `data/processed/features_graph.parquet`: one row per `txn_id`, columns prefixed `g1_` … `g5_`
@@ -74,10 +74,10 @@ Leakage tests (`tests/test_features.py`):
 - [ ] One-line definition of every feature in `docs/data_dictionary.md`
 
 ### Baselines (R3) · by Fri 6 Nov
-- [ ] LR (`class_weight="balanced"`, grid over C), MLP (5 seeds, mean ± sd), LightGBM (`scale_pos_weight`)
-- [ ] Tune by val PR-AUC. Same grids get reused for the graph versions
-- [ ] Row-level scores for val and test; hyperparameters to `reports/tables/hyperparams.csv`
-- [ ] Smoke-test a txn + features-v1 run on Thu 5 Nov
+- [x] LR (`class_weight="balanced"`, grid over C), MLP (5 seeds, mean ± sd), LightGBM (`scale_pos_weight`)
+- [x] Tune by val PR-AUC. Same grids get reused for the graph versions
+- [x] Row-level scores for val and test; hyperparameters to `reports/tables/hyperparams.csv` (val done 1 Nov; test written at the freeze with `--score-test`)
+- [x] Smoke-test a txn + features-v1 run on Thu 5 Nov (done 1 Nov)
 
 ### Reproducibility (R1)
 - [ ] `python -m src.run_all` so the whole pipeline runs without bash (Windows users, markers)
@@ -85,7 +85,7 @@ Leakage tests (`tests/test_features.py`):
 **Checkpoint Sun 8 Nov:** baseline results table reviewed, feature pipeline merged, all tests green.
 
 ## Week 3 · Mon 9 Nov – Sun 15 Nov: Main experiments, then freeze
-- [ ] Graph-augmented runs for all 3 models (R3, Mon 9 – Tue 10)
+- [x] Graph-augmented runs for all 3 models (R3, Mon 9 – Tue 10) (val done 1 Nov; rerun if graph features change)
 - [ ] Main table: 3 models × {txn, txn+graph} on test with CIs and paired differences (R4)
 - [ ] Ablation: all minus one group at a time, plus label-free (G1–G4) vs labels-only (G5). Use LR + LightGBM (R2)
 - [ ] Label delay: 7-day vs 1-day G5 (R2)
@@ -103,6 +103,25 @@ Leakage tests (`tests/test_features.py`):
 - **Wed 18:** one full rehearsal, then record by segment. Aim for 13:30 (limit is 15). Title + all names on screen at the start for ~8 s.
 - **Thu 19:** buffer for a re-record. Polish the README. Fresh-clone reproducibility test on a second laptop.
 - **Fri 20:** submit by midday, not at 23:59. Check the file names (a wrong name costs 2% of that component) and that the repo is accessible.
+
+## Stretch: UI / webapp (only after the base plan is satisfied)
+A UI is rewarded, but it must never put the required deliverables at risk. **Do not start until all of these are true:**
+- [ ] Results frozen and `v-results` tagged (Sun 15 Nov)
+- [ ] Report §3–4 drafted, slides finished, all tests green
+- [ ] Owner agreed in the group chat (someone with spare time, not whoever is behind on their report section)
+
+Rules:
+- **Read-only on frozen outputs.** The app reads `reports/tables/*.csv`, `reports/scores/*.parquet` and `data/processed/`. It never retrains, recomputes metrics or produces a number that isn't already in `reports/tables/`. Otherwise the app and the report could disagree.
+- Single page-per-idea Streamlit app in `app/`, started with `uv run streamlit run app/main.py`. Add it with `uv add streamlit` (plus `plotly` if needed) and re-export `requirements.txt`.
+- **Cut-off Tue 17 Nov evening.** If it isn't working by then, drop it. Nothing in the report, slides or video may depend on it. If it works, it gets a short demo clip (~1 min) in the video and a screenshot in the report appendix.
+- The README gets a "Run the app" section. The fresh-clone test on Thu 19 must still pass with or without the app.
+
+Candidate pages (build in this order, stop whenever time runs out):
+1. **Results explorer.** Pick model × feature set × metric and see test results with bootstrap CIs, the paired difference (txn vs txn+graph), and the recall@1% ceiling (92.75%) drawn as a reference line.
+2. **Review-budget simulator.** A slider for the review budget (0.5%–5%) updates recall, precision, false positives, fraud value caught, analyst reviews per day and analyst hours (stated minutes-per-review assumption, matching §4.5). Toggle "all fraud" vs "normal-looking fraud only" and "txn" vs "txn+graph".
+3. **Alert queue and case viewer.** A ranked list of the top-scoring test transactions for the chosen model, with the score, amount, category and whether the txn was in the normal-looking subgroup. Clicking one shows the customer's past transactions, whether this customer–merchant pair is new, and the top feature contributions (SHAP for LightGBM, coefficients for LR). Pre-select the 3–4 case studies of fraud only the graph model caught.
+4. **Customer–merchant graph view.** For a selected customer: their merchants as a small network, edges sized by prior transaction count, the flagged transaction highlighted. Optional day slider that shows the graph as it looked before that day, which also illustrates the leakage rule.
+5. **Ablation and label-delay page.** Bar chart of the leave-one-group-out ablation and the 7-day vs 1-day G5 comparison, so the "graph structure vs past labels" story is interactive.
 
 ## Report outline (aim for 11 pages)
 | Section | Pages | Author |
@@ -126,4 +145,4 @@ Appendix: feature definitions, hyperparameters, extra figures, GenAI acknowledge
 - One branch per work package; merge through a PR reviewed by one other person.
 - Written standup in the group chat Mon / Wed / Fri (done, next, blocked); 30-min call each Sunday.
 - Log GenAI help in `docs/genai_log.md` as you go. Everyone must be able to explain every part of the submission.
-- Out of scope: GNNs (future work only). G4 is the only stretch item.
+- Out of scope: GNNs (future work only). G4 and the UI/webapp (see the stretch section) are the only stretch items, and the UI is only started after the freeze.

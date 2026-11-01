@@ -8,6 +8,8 @@ PROCESSED_DIR = ROOT / "data" / "processed"
 SPLIT_DIR = PROCESSED_DIR / "splits"
 FIG_DIR = ROOT / "reports" / "figures"
 TABLE_DIR = ROOT / "reports" / "tables"
+SCORE_DIR = ROOT / "reports" / "scores"     # row-level model scores (txn_id, score)
+MODEL_DIR = ROOT / "models"                 # fitted models (gitignored)
 
 RAW_FILE = RAW_DIR / "bs140513_032310.csv"
 CLEAN_FILE = PROCESSED_DIR / "banksim_clean.parquet"

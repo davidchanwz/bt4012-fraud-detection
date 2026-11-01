@@ -4,6 +4,11 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 
+# fitted models are rebuilt by src.models.train; mock scores must never look like results
+models/
+reports/scores_mock/
+reports/tables/*_mock.*
+
 # python
 __pycache__/
 *.pyc

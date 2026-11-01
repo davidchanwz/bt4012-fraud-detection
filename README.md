@@ -41,6 +41,20 @@ uv run jupyter lab                   # notebooks
 
 The raw CSV isn't committed because it's too big for the repo. `download.py` pulls it from a public GitHub mirror of the Kaggle dataset and checks the file hash. If that fails, download `bs140513_032310.csv` from [Kaggle (ealaxi/banksim1)](https://www.kaggle.com/datasets/ealaxi/banksim1) and put it in `data/raw/`.
 
+## Models (week 2+)
+
+Needs the processed data and graph features above. **macOS:** LightGBM needs OpenMP, so run `brew install libomp` once, otherwise `import lightgbm` fails with `Library not loaded: @rpath/libomp.dylib`.
+
+```bash
+uv run python -m src.models.run_main                 # 3 models x {txn, txn_graph}, val scores (~4 min)
+uv run python -m src.models.train --model lgbm --features txn_graph --groups g1,g3   # one run / ablation
+uv run python -m src.models.interpret --model lgbm   # feature contributions (val)
+uv run python -m src.models.case_studies --model lgbm --split val   # graph-only catches
+uv run python -m src.models.run_main --score-test    # at the freeze only
+```
+
+Each run writes `reports/scores/{model}_{feature_set}_{split}.parquet` (`txn_id, score`) and a row in `reports/tables/hyperparams.csv`. Test scores are only written with `--score-test`. Fitted models go to `models/` (gitignored).
+
 ## Data split
 
 | split | days (`step`) | txns | fraud |
@@ -63,9 +77,14 @@ src/
   features/subgroup.py "normal-looking fraud" flags (fixed in week 1)
   features/graph.py    leakage-safe graph / history features (g1 customer, g2 merchant,
                        g3 customer-merchant edge, g5 past labels) + GraphScaler
+  models/train.py      train + tune one model on one feature set -> scores, hyperparams
+  models/run_main.py   the six main runs in one command
+  models/interpret.py  LR coefficients, LightGBM contributions
+  models/case_studies.py  fraud caught by the graph model only (shortlist)
+  models/results_table.py §4.1 table from R4's results CSVs
   eda.py               figures + tables
 tests/                 pytest sanity checks (cleaning, split leakage, subgroup,
-                       graph-feature leakage)
+                       graph-feature leakage, model training contract)
 docs/
   plan.md              4-week plan + owners
   data_dictionary.md   variable table for the report

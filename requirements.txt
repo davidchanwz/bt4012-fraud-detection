@@ -12,14 +12,19 @@ joblib==1.6.0
     # via scikit-learn
 kiwisolver==1.5.1
     # via matplotlib
+lightgbm==4.7.0
+    # via bt4012-fraud-detection
 matplotlib==3.11.2
     # via bt4012-fraud-detection
 narwhals==2.27.1
-    # via scikit-learn
+    # via
+    #   lightgbm
+    #   scikit-learn
 numpy==2.5.4
     # via
     #   bt4012-fraud-detection
     #   contourpy
+    #   lightgbm
     #   matplotlib
     #   pandas
     #   scikit-learn
@@ -41,7 +46,9 @@ python-dateutil==3.0.0
 scikit-learn==1.9.1
     # via bt4012-fraud-detection
 scipy==1.18.1
-    # via scikit-learn
+    # via
+    #   lightgbm
+    #   scikit-learn
 six==1.17.0
     # via python-dateutil
 threadpoolctl==3.7.0
