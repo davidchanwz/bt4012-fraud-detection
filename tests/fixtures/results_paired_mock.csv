@@ -1,0 +1,16 @@
+model,split,metric,diff,ci_low,ci_high
+lr,test,pr_auc,0.03,0.01,0.05
+lr,test,roc_auc,0.03,0.01,0.05
+lr,test,f1,0.03,0.01,0.05
+lr,test,recall_at_1pct,0.03,0.01,0.05
+lr,test,recall_at_1pct_normal_looking,0.03,0.01,0.05
+mlp,test,pr_auc,0.03,0.01,0.05
+mlp,test,roc_auc,0.03,0.01,0.05
+mlp,test,f1,0.03,0.01,0.05
+mlp,test,recall_at_1pct,0.03,0.01,0.05
+mlp,test,recall_at_1pct_normal_looking,0.03,0.01,0.05
+lgbm,test,pr_auc,0.03,0.01,0.05
+lgbm,test,roc_auc,0.03,0.01,0.05
+lgbm,test,f1,0.03,0.01,0.05
+lgbm,test,recall_at_1pct,0.03,0.01,0.05
+lgbm,test,recall_at_1pct_normal_looking,0.03,0.01,0.05
