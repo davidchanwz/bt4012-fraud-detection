@@ -5,7 +5,7 @@
 ## Main table
 Table 4.1 = `reports/tables/results_main.md`, produced by `python -m src.models.results_table` from R4's `results_main.csv` and `results_paired.csv`.
 
-- One paragraph: overall effect of graph features per model. PR-AUC txn → txn+graph: LR TBD → TBD, MLP TBD → TBD (± TBD over seeds), LightGBM TBD → TBD. Paired Δ with CIs: TBD.
+- One paragraph: overall effect of graph features per model. PR-AUC txn → txn+graph: LR TBD → TBD, MLP TBD → TBD (the 5-seed average; per-seed sd TBD from `hyperparams.csv`, reported as stability, not as a CI), LightGBM TBD → TBD. Paired Δ with CIs: TBD.
 - Whether the CIs exclude zero: TBD.
 - Ranking of models: TBD. Does the graph gain shrink for the stronger model? TBD.
 

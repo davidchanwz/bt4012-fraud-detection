@@ -147,7 +147,7 @@ Goal: "3–4 case studies of fraud caught only by the graph model."
 uv run python -m src.models.case_studies --model lgbm --split val --budget 0.01 --top 10 [--scores-dir reports/scores]
 ```
 1. Load `{model}_txn_{split}` and `{model}_txn_graph_{split}` score files and the split's labels.
-2. Flag the top `ceil(budget × n)` by score for each model (budget 1% by default; also run 2%).
+2. Flag the top `floor(budget × n)` by score for each model (budget 1% by default; also run 2%), ties broken by lower `txn_id`. This matches R4's tables and the 1,113-alert / 92.75% figures in `CLAUDE.md`. (Changed from `ceil` on 2 Nov: `ceil` gave 1,085 alerts on val and would give 1,114 on test.)
 3. Candidates: `fraud == 1` and flagged by the graph model and **not** flagged by the txn model. Also compute the reverse set (flagged by txn only), and the overlap, so the report can say honestly how many there are in each direction.
 4. Add the `normal_looking` and `normal_looking_strict` flags using `src/features/subgroup.py` (read it for the function signatures; thresholds come from train only).
 5. Rank candidates (prefer normal-looking, then largest rank improvement). Save the top K to `reports/tables/case_study_candidates.csv` with `txn_id, step, customer, merchant, category, amount`, both scores and ranks, the subgroup flags, and key graph features (`g3_pair_is_new`, `g1_cust_amt_z`, `g5_merch_fraud_rate`, ...).
@@ -176,7 +176,7 @@ Also create the section skeleton `docs/report/4_1_main_results.md`: headings for
 About 1 page. Write from decisions, with no result numbers:
 - Why these three: LR (interpretable baseline, `class_weight`), MLP (the proposal's non-linear model, small by design), LightGBM (strong tabular baseline, cheap).
 - Imbalance handling per model and why (class weights, undersampling 10:1 with the same sample for both feature sets, `scale_pos_weight`), and the note that undersampling distorts probabilities but not rankings, which is why threshold-free and budget metrics are primary.
-- Tuning protocol: grids, val PR-AUC, MLP 5 seeds mean ± sd, same grids reused for graph versions, no refit on train+val, threshold picked on val.
+- Tuning protocol: grids, val PR-AUC, MLP 5 seeds (scores averaged; per-seed sd as a stability check), same grids reused for graph versions, no refit on train+val, threshold picked on val.
 - The fairness point: the only difference between paired runs is the feature set.
 - Limitations: small grids, one split, simulated data.
 - Cross-reference R2's §3.1–3.2 and R4's §3.4 instead of repeating them.

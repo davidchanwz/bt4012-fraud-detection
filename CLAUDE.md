@@ -25,14 +25,14 @@ BankSim, a simulated payments dataset (Lopez-Rojas & Axelsson, 2014): 594,643 tr
 ## Fixed design (don't change without telling the group and saying so in the report)
 - **Split by time** (`src/config.py`): train days 0–119, val 120–149, test 150–179. Test has 111,306 rows and 1,200 fraud.
 - **Normal-looking fraud subgroup** (`docs/subgroup_definition.md`, `src/features/subgroup.py`), defined before any modelling. Primary: amount at or below the 95th percentile of legit amounts in the same category (train only); 400 test cases. Strict: amount at or below 72.81; 164 test cases. A 90th-percentile sensitivity check is allowed, but it is a check, not a way to pick the best number.
-- **Review budget.** At a 1% budget the test set gives 1,113 alerts, so the **best possible recall@1% is 92.75%**. Print this ceiling next to every recall@1% number.
+- **Review budget.** At a 1% budget the test set gives 1,113 alerts, so the **best possible recall@1% is 92.75%**. Print this ceiling next to every recall@1% number. The queue is the top **floor**(budget × n) rows of the whole split by score, ties broken by lower `txn_id`. Every script that builds a queue (R4's tables, R3's case studies) must use this rule, so counts match across the report.
 - **Protocol.** Train on train, tune on val, score test once at freeze. The F1 threshold is picked on val and applied to test unchanged. No refit on train+val.
 - **Metrics.** PR-AUC primary, ROC-AUC secondary. Precision/recall/F1 at the val threshold. Recall, precision and false positives at 1% and 2% budgets, and fraud amount caught. All of it on the whole test set and on both subgroups. Stratified bootstrap CIs (1,000 resamples) and a **paired** bootstrap for txn vs txn+graph on the same rows.
 
 ## Models (each trained on `txn` and on `txn_graph` features)
 The kickoff decisions were agreed on 1 Nov 2026 on the plan's recommended answers: LightGBM is in, G5 label delay is 7 days (1 day as a sensitivity check), the NN is sklearn `MLPClassifier`, and the protocol is train / tune on val / score test once at freeze.
 - Logistic regression: `class_weight="balanced"`, grid over C.
-- Feedforward NN: sklearn `MLPClassifier`, early stopping, legit rows undersampled in train (same sample for both feature sets), 5 seeds, mean ± sd.
+- Feedforward NN: sklearn `MLPClassifier`, early stopping, legit rows undersampled in train (same sample for both feature sets), 5 seeds. The score file averages the 5 seeds' probabilities, so every results table reports that 5-seed average. The per-seed sd of val PR-AUC (`hyperparams.csv`) is a separate stability check, not the table's error bar (that's the bootstrap CI).
 - LightGBM: `scale_pos_weight`. Cheap on CPU and makes ablations fast.
 Tune by val PR-AUC; reuse the same grids for the graph versions. GNNs are out of scope (future work only).
 
