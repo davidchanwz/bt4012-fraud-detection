@@ -1,10 +1,10 @@
 """Main results table for report §4.1: 3 models x {txn, txn_graph} with CIs and paired differences.
 
 Reads R4's tables (src/eval/metrics.py writes them; this script never computes a metric):
-    reports/tables/results_main.csv     model, feature_set, split, metric, value, ci_low, ci_high
-    reports/tables/results_paired.csv   model, split, metric, diff, ci_low, ci_high   (txn_graph - txn)
-and writes reports/tables/results_main.md. The schema is a PROPOSAL until Rayson (R4)
-confirms it; if his files differ, only read_main / read_paired should need changing.
+    reports/tables/results_main_{split}.csv         model, feature_set, split, metric, value, ci_low, ci_high, ...
+    reports/tables/results_main_paired_{split}.csv  model, split, metric, diff, ci_low, ci_high, ...  (txn_graph - txn)
+and writes reports/tables/results_main_{split}.md. Schema confirmed by R4 on 2 Nov; R4's files
+carry extra trailing columns, which are ignored here.
 
     python -m src.models.results_table [--split test] [--main PATH --paired PATH --out PATH]
 
@@ -19,7 +19,8 @@ import pandas as pd
 from src.config import ROOT, TABLE_DIR
 from src.models.grids import MODELS
 
-# recall@1% can't exceed this on test: 1,113 alerts for 1,200 fraud (see docs/plan.md)
+# recall@1% can't exceed this on test: 1,113 alerts for 1,200 fraud (see docs/plan.md).
+# Used only when the results file has no max_recall_at_1pct row (R4's files do, for every split).
 CEILINGS = {("test", "recall_at_1pct"): 1113 / 1200}
 
 METRICS = [            # (column, label); only those present in the file are shown
@@ -63,6 +64,8 @@ def fmt_ci(v, lo, hi, signed=False):
 def build_table(main, paired, split="test"):
     """Long tables -> one wide frame: rows = model x feature set (+ paired diff row), cols = metrics."""
     main, paired = main[main.split == split], paired[paired.split == split]
+    if {"feature_set_base", "feature_set_new"} <= set(paired.columns):    # R4's file can hold other pairs
+        paired = paired[(paired.feature_set_base == "txn") & (paired.feature_set_new == "txn_graph")]
     metrics = [(m, lab) for m, lab in METRICS if m in set(main.metric)]
     rows = []
     for model in [m for m in MODELS if m in set(main.model)]:
@@ -83,20 +86,31 @@ def build_table(main, paired, split="test"):
     return pd.DataFrame(rows)
 
 
-def to_markdown(table, split):
+def ceiling(main, split):
+    """Best possible recall@1%: from R4's max_recall_at_1pct row if present, else the fixed test value."""
+    rows = main[(main.split == split) & (main.metric == "max_recall_at_1pct")]
+    if len(rows):
+        return float(rows.value.iloc[0])
+    return CEILINGS.get((split, "recall_at_1pct"))
+
+
+def to_markdown(table, split, ceil_1pct=None):
     cols = list(table.columns)
     lines = ["| " + " | ".join(cols) + " |", "|" + "---|" * len(cols)]
     lines += ["| " + " | ".join(str(r[c]) for c in cols) + " |" for _, r in table.iterrows()]
     notes = [f"Split: {split}. Point estimate [95% bootstrap CI]. Δ = txn+graph minus txn, paired bootstrap."]
-    if (split, "recall_at_1pct") in CEILINGS and "Recall @1%" in cols:
-        c = CEILINGS[(split, "recall_at_1pct")]
-        notes.append(f"Best possible recall@1% on {split} is {c:.2%} (1,113 alerts for 1,200 fraud).")
+    if ceil_1pct is None:
+        ceil_1pct = CEILINGS.get((split, "recall_at_1pct"))
+    if ceil_1pct is not None and "Recall @1%" in cols:
+        notes.append(f"Best possible recall@1% on {split} is {ceil_1pct:.2%} "
+                     "(the 1% queue is smaller than the number of fraud cases).")
     return "\n".join(lines + [""] + notes) + "\n"
 
 
 def run(main_path, paired_path, out, split="test", log=print):
-    table = build_table(read_main(main_path), read_paired(paired_path), split)
-    md = to_markdown(table, split)
+    main = read_main(main_path)
+    table = build_table(main, read_paired(paired_path), split)
+    md = to_markdown(table, split, ceiling(main, split))
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(md)
     log(md)
@@ -107,12 +121,14 @@ def run(main_path, paired_path, out, split="test", log=print):
 def main(argv=None):
     path = lambda s: ROOT / s if not s.startswith("/") else s
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--main", default=TABLE_DIR / "results_main.csv", type=path)
-    p.add_argument("--paired", default=TABLE_DIR / "results_paired.csv", type=path)
-    p.add_argument("--out", default=TABLE_DIR / "results_main.md", type=path)
+    p.add_argument("--main", type=path, help="default: reports/tables/results_main_{split}.csv")
+    p.add_argument("--paired", type=path, help="default: reports/tables/results_main_paired_{split}.csv")
+    p.add_argument("--out", type=path, help="default: reports/tables/results_main_{split}.md")
     p.add_argument("--split", default="test", choices=["val", "test"])
     a = p.parse_args(argv)
-    run(a.main, a.paired, a.out, a.split)
+    run(a.main or TABLE_DIR / f"results_main_{a.split}.csv",
+        a.paired or TABLE_DIR / f"results_main_paired_{a.split}.csv",
+        a.out or TABLE_DIR / f"results_main_{a.split}.md", a.split)
 
 
 if __name__ == "__main__":

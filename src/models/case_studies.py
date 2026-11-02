@@ -1,7 +1,7 @@
 """Candidates for the case studies: fraud the graph model catches and the txn model misses.
 
-For one model and split, flag the top ceil(budget * n) rows by score for the
-txn and txn_graph versions. Count fraud caught by both, graph only, txn only.
+For one model and split, flag the top floor(budget * n) rows by score for the
+txn and txn_graph versions (the same queue as R4's tables: src.eval.core.n_alerts). Count fraud caught by both, graph only, txn only.
 Rank the graph-only catches (normal-looking first, then by how far the graph
 model moved them up) and save the top K with context for a human to pick 3-4.
 The script doesn't pick the story; it just makes the shortlist reproducible.
@@ -14,12 +14,12 @@ Outputs (suffix _mock when --scores-dir isn't the real score dir):
     reports/tables/case_study_counts.csv     upserted, one row per (model, split, budget, source)
 """
 import argparse
-import math
 
 import numpy as np
 import pandas as pd
 
 from src.config import GRAPH_FILE, ROOT, SCORE_DIR, TABLE_DIR
+from src.eval.core import n_alerts
 from src.features.subgroup import fit_thresholds, flag_normal_looking
 from src.models.data import load_splits
 from src.models.grids import MODELS
@@ -40,8 +40,9 @@ def load_score(scores_dir, model, fs, split):
 
 
 def top_k_flags(scores, budget):
-    """1 for the top ceil(budget * n) rows by score (ties broken by txn_id, so it's deterministic)."""
-    k = math.ceil(budget * len(scores))
+    """1 for the top floor(budget * n) rows by score (ties broken by txn_id, so it's deterministic).
+    Same queue size as R4's tables, so case-study counts and budget metrics agree."""
+    k = n_alerts(len(scores), budget)
     order = pd.DataFrame({"s": scores.to_numpy(), "id": scores.index}).sort_values(
         ["s", "id"], ascending=[False, True])
     flags = pd.Series(0, index=scores.index, dtype="int8")

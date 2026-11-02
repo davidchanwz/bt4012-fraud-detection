@@ -231,3 +231,18 @@ def test_paired_difference_is_zero_for_identical_runs():
     paired = M.paired_table(points, boots, [("txn", "txn_graph")], "val")
     assert (paired["diff"].fillna(0) == 0).all()
     assert (paired.ci_low.fillna(0) == 0).all() and (paired.ci_high.fillna(0) == 0).all()
+
+
+def test_results_table_reads_eval_output(tmp_path):
+    """Contract between R4's files and R3's §4.1 formatter: it must read them unchanged."""
+    from src.models import results_table as R
+    run_toy(tmp_path)
+    t = tmp_path / "tables"
+    table = R.run(t / "results_main_test.csv", t / "results_main_paired_test.csv", t / "t.md",
+                  split="test", log=lambda *a: None)
+    assert list(table.Features) == ["txn", "txn + graph", "Δ (paired)"]
+    md = (t / "t.md").read_text()
+    assert "Recall @1% (normal-looking)" in md
+    main = pd.read_csv(t / "results_main_test.csv")
+    ceiling = main.loc[main.metric == "max_recall_at_1pct", "value"].iloc[0]
+    assert ceiling < 1 and f"Best possible recall@1% on test is {ceiling:.2%}" in md   # read from the file
