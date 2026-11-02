@@ -5,7 +5,7 @@ data/processed/*
 !data/processed/.gitkeep
 
 # fitted models are rebuilt by src.models.train; mock scores must never look like results
-models/
+/models/
 reports/scores_mock/
 reports/tables/*_mock.*
 
