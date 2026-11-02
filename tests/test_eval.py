@@ -246,3 +246,30 @@ def test_results_table_reads_eval_output(tmp_path):
     main = pd.read_csv(t / "results_main_test.csv")
     ceiling = main.loc[main.metric == "max_recall_at_1pct", "value"].iloc[0]
     assert ceiling < 1 and f"Best possible recall@1% on test is {ceiling:.2%}" in md   # read from the file
+
+
+def test_budget_curve_and_fp_profile_agree_with_budget_table(tmp_path):
+    _, _, budget = run_toy(tmp_path)
+    t = tmp_path / "tables"
+    curve = pd.read_csv(t / "results_main_budget_curve_test.csv")
+    prof = pd.read_csv(t / "results_main_fp_profile_test.csv")
+    for fs in ["txn", "txn_graph"]:
+        for policy, b in [("budget_1pct", 0.01), ("budget_2pct", 0.02)]:
+            row = budget[(budget.policy == policy) & (budget.feature_set == fs)].iloc[0]
+            at_b = (curve.feature_set == fs) & ((curve.budget - b).abs() < 1e-9)
+            c = curve[at_b & (curve.subset == "all")].iloc[0]
+            assert c.tp == row.tp and c.fp == row.fp and c.n_alerts == row.n_alerts
+            assert curve[at_b & (curve.subset == "normal_looking")].iloc[0].tp == row.normal_looking_tp
+            p = prof[(prof.policy == policy) & (prof.feature_set == fs)]
+            assert p.fp.sum() == row.fp                               # every queued legit row counted once
+            assert p.fp_share.sum() == pytest.approx(1.0 if row.fp else 0.0)   # empty when no FPs
+            assert p.fp_normal_looking.sum() == row.normal_looking_fp
+    assert curve.budget.nunique() == 50 and curve.budget.max() == pytest.approx(0.05)
+    assert (curve.groupby(["feature_set", "subset"]).recall.apply(lambda r: r.is_monotonic_increasing)).all()
+
+
+def test_figure_draws_from_tables(tmp_path):
+    from src.eval import figures
+    run_toy(tmp_path)
+    out = figures.run("test", table_dir=tmp_path / "tables", fig_dir=tmp_path / "figs", log=lambda *a: None)
+    assert out.exists() and out.stat().st_size > 10_000
