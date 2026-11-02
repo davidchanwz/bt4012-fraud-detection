@@ -17,10 +17,12 @@ import pandas as pd
 QUANTILE = 0.95
 
 
-def fit_thresholds(train):
+def fit_thresholds(train, quantile=QUANTILE):
+    # `quantile` is only changed for the 90th-percentile sensitivity check (R4);
+    # the subgroup definition itself stays at QUANTILE = 0.95.
     legit = train[train.fraud == 0]
-    by_cat = legit.groupby("category", observed=True)["amount"].quantile(QUANTILE)
-    global_cut = float(legit["amount"].quantile(QUANTILE))
+    by_cat = legit.groupby("category", observed=True)["amount"].quantile(quantile)
+    global_cut = float(legit["amount"].quantile(quantile))
     return by_cat, global_cut
 
 

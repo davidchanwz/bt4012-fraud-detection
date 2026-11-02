@@ -55,6 +55,24 @@ uv run python -m src.models.run_main --score-test    # at the freeze only
 
 Each run writes `reports/scores/{model}_{feature_set}_{split}.parquet` (`txn_id, score`) and a row in `reports/tables/hyperparams.csv`. Test scores are only written with `--score-test`. Fitted models go to `models/` (gitignored).
 
+## Evaluation (week 2+)
+
+Reads the score files above and never retrains. About 4 minutes for the six main runs (1,000 bootstrap resamples).
+
+```bash
+uv run python -m src.eval.metrics                    # main six runs on val
+uv run python -m src.eval.metrics --split test       # at the freeze only, after --score-test
+uv run python -m src.eval.metrics --models lr,lgbm --feature-sets txn_graph,txn_graph_g1g3 \
+    --pairs txn_graph:txn_graph_g1g3 --name ablation # any other comparison, e.g. R2's ablation
+```
+
+Writes to `reports/tables/`:
+- `results_{name}_{split}.csv`: long format, `model, feature_set, split, metric, value, ci_low, ci_high, subset, n_rows, n_fraud`. PR-AUC, ROC-AUC; precision / recall / F1 / FP at the val-chosen F1 threshold; recall, precision, FP and fraud amount caught at the 1% and 2% review budgets (with the `max_recall` ceiling). Every metric on all rows and on `normal_looking`, `normal_looking_strict` and `normal_looking_q90` (sensitivity check). Subgroup metrics carry the subgroup as a suffix, e.g. `recall_at_1pct_normal_looking`.
+- `results_{name}_paired_{split}.csv`: `diff = new - base` (default `txn_graph - txn`) with a paired bootstrap CI.
+- `results_{name}_budget_{split}.csv`: one row per run and alerting policy (each budget, plus the val threshold): alerts and false positives per day, fraud amount caught, and how many queued legit rows look normal.
+
+CIs are 95% percentile intervals from a stratified bootstrap (fraud and legit resampled separately, seed from `src/config.py`). The budget queue is the top `floor(budget × n)` rows of the whole split, ties broken by lower `txn_id`; subgroup recall at a budget is the share of that subgroup's fraud that lands in this same queue. Python helper for model selection: `from src.eval.metrics import score_predictions`.
+
 ## Data split
 
 | split | days (`step`) | txns | fraud |
@@ -82,6 +100,8 @@ src/
   models/interpret.py  LR coefficients, LightGBM contributions
   models/case_studies.py  fraud caught by the graph model only (shortlist)
   models/results_table.py §4.1 table from R4's results CSVs
+  eval/core.py         metric maths (weighted, so the bootstrap reuses it)
+  eval/metrics.py      score files -> results tables with CIs (R4)
   eda.py               figures + tables
 tests/                 pytest sanity checks (cleaning, split leakage, subgroup,
                        graph-feature leakage, model training contract)

@@ -5,6 +5,7 @@ data/processed/*
 !data/processed/.gitkeep
 
 # fitted models are rebuilt by src.models.train; mock scores must never look like results
+# leading slash: only the top-level models/ folder. Without it, src/models/ (the code) was ignored too.
 /models/
 reports/scores_mock/
 reports/tables/*_mock.*
