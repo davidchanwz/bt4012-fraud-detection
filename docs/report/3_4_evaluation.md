@@ -1,0 +1,13 @@
+# 3.4 Evaluation design (draft, R4)
+
+*Draft for the report. About half a page. No result numbers here; those go in §4. The 1,113 / 92.75% figures are fixed by the split, not results. Paragraph 5 names the two headline comparisons in advance: confirm with the group before the freeze. Code: `src/eval/` (README, "Evaluation").*
+
+**Metrics.** With 1.1% fraud in test, ROC-AUC is close to 1 for every model and separates them poorly, so the primary metric is PR-AUC (average precision), which is driven by how clean the top of the ranking is. ROC-AUC is reported as secondary. Precision, recall and F1 are reported at one decision threshold per model, chosen to maximise F1 on validation and applied to test unchanged.
+
+**Review budget.** A fraud team reviews a fixed number of alerts, not every transaction above a threshold. We model this as a queue holding the top 1% (or 2%) of test transactions by score: ⌊0.01 × 111,306⌋ = 1,113 alerts over 30 days, about 37 a day, ties broken by transaction id. Because this queue is smaller than the 1,200 test frauds, the best possible recall@1% is 92.75%, and we print this ceiling beside every recall@1%. At each budget we report recall, precision, false positives (legit transactions an analyst reviews for nothing) and the share of fraud value caught.
+
+**Normal-looking fraud.** The subgroups were fixed before modelling (§2): amount at or below the 95th percentile of legit amounts in the same category (400 test frauds), and a stricter global cut (164). Subgroup recall at a budget is the share of that subgroup's fraud that lands in the *same* whole-test-set queue, since an analyst can't tell which alerts look normal. Subgroup PR-AUC and threshold metrics use the subgroup's rows only. A 90th-percentile version is a sensitivity check, not an alternative result.
+
+**Uncertainty.** We report 95% percentile intervals from a stratified bootstrap: 1,000 resamples of the test rows, fraud and legit drawn separately, so every resample keeps exactly 1,200 frauds. To compare `txn` with `txn+graph` we use a paired bootstrap: each resample uses the same rows for both models, and the interval is for the difference itself. We call a difference clear when its interval excludes zero. These intervals cover the sampling of test transactions, not retraining or a different time split; MLP seed variation is reported separately (§3.3).
+
+**Avoiding cherry-picking.** With many metric and subgroup combinations, we name two headline comparisons in advance: PR-AUC on all test transactions, and recall@1% on normal-looking fraud. The rest is descriptive, with no multiple-comparison correction.

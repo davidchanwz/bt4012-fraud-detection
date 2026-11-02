@@ -13,6 +13,11 @@ and the split's labels. Writes to reports/tables/:
     results_{name}_paired_{split}.csv   model, split, metric, diff, ci_low, ci_high, feature_set_base, feature_set_new, subset
     results_{name}_budget_{split}.csv   one row per model x feature set x alerting policy: alerts, TP, FP,
                                         recall, fraud amount caught, and the normal-looking breakdown
+    results_{name}_budget_curve_{split}.csv   recall / precision / FP at every budget from 0.1% to 5%
+                                        (point estimates), per subgroup: for the figure and the UI's slider
+    results_{name}_fp_profile_{split}.csv     the legit rows in each budget queue, by category: what the
+                                        analysts' false positives look like (FP burden, §4.4)
+Figures from these tables: uv run python -m src.eval.figures
 
 Method (see src/eval/core.py for the conventions):
 - PR-AUC primary, ROC-AUC secondary.
@@ -44,6 +49,7 @@ BUDGETS = (0.01, 0.02)
 SUBSETS = ("all", "normal_looking", "normal_looking_strict", "normal_looking_q90")
 N_BOOT = 1000
 SENSITIVITY_QUANTILE = 0.90
+CURVE_BUDGETS = tuple(round(0.001 * i, 3) for i in range(1, 51))      # 0.1%, 0.2%, ..., 5.0%
 
 MAIN_COLS = ["model", "feature_set", "split", "metric", "value", "ci_low", "ci_high",
              "subset", "n_rows", "n_fraud"]
@@ -226,6 +232,59 @@ def budget_table(labels, runs, thresholds, split, budgets=BUDGETS, subsets=SUBSE
     return pd.DataFrame(rows)
 
 
+def budget_curve(labels, runs, split, budgets=CURVE_BUDGETS, subsets=SUBSETS):
+    """Recall, precision and FP at every budget in `budgets` (point estimates; CIs are in the main
+    table at 1% and 2%). Same whole-split queue as everywhere else."""
+    y = labels.fraud.to_numpy()
+    masks = {sub: np.ones(len(labels), bool) if sub == "all" else labels[sub].to_numpy() == 1
+             for sub in subsets}
+    n_days = labels.step.nunique()
+    rows = []
+    for (model, fs), s in runs.items():
+        run = SortedRun(s, y, labels.txn_id.to_numpy(), labels.amount.to_numpy(), masks)
+        for b in budgets:
+            c = run.policy_counts("budget", budget=b)
+            k = c["n_alerts"]
+            for sub in subsets:
+                d = c[sub]
+                rows.append({
+                    "model": model, "feature_set": fs, "split": split, "budget": b,
+                    "n_alerts": int(k), "alerts_per_day": k / n_days, "subset": sub,
+                    "n_fraud": int(d["n_fraud"]), "tp": int(d["tp"]), "fp": int(d["fp"]),
+                    "recall": d["tp"] / d["n_fraud"] if d["n_fraud"] else np.nan,
+                    "precision": d["tp"] / (d["tp"] + d["fp"]) if d["tp"] + d["fp"] else np.nan,
+                    "max_recall": min(k, d["n_fraud"]) / d["n_fraud"] if sub == "all" else np.nan,
+                    "amount_share": d["amount_caught"] / d["amount_total"] if d["amount_total"] else np.nan,
+                })
+    return pd.DataFrame(rows)
+
+
+def fp_profile(labels, runs, split, budgets=BUDGETS):
+    """The legit transactions inside each budget queue, by category: who the analysts are
+    reviewing for nothing. fp_rate = share of that category's legit rows that get queued."""
+    legit_by_cat = labels[labels.fraud == 0].groupby("category", observed=True).size()
+    rows = []
+    for (model, fs), s in runs.items():
+        ranked = labels.assign(score=s).sort_values(["score", "txn_id"], ascending=[False, True])
+        for b in budgets:
+            queue = ranked.head(n_alerts(len(labels), b))
+            fp = queue[queue.fraud == 0]
+            g = fp.groupby("category", observed=True)
+            t = pd.DataFrame({"fp": g.size(), "fp_normal_looking": g.normal_looking.sum(),
+                              "fp_median_amount": g.amount.median()})
+            t = t[t.fp > 0].sort_values("fp", ascending=False)
+            t["fp_share"] = t.fp / len(fp)
+            t["legit_in_split"] = legit_by_cat.reindex(t.index).to_numpy()
+            t["fp_rate"] = t.fp / t.legit_in_split
+            t = t.rename_axis("category").reset_index()
+            t.insert(0, "policy", f"budget_{budget_tag(b)}")
+            t.insert(0, "split", split)
+            t.insert(0, "feature_set", fs)
+            t.insert(0, "model", model)
+            rows.append(t)
+    return pd.concat(rows, ignore_index=True)
+
+
 # --- running it ---------------------------------------------------------------
 
 def thresholds_from_val(run_keys, scores_dir, val_labels):
@@ -268,17 +327,18 @@ def run(split="val", models=MODELS, feature_sets=FEATURE_SETS, pairs=(("txn", "t
                                len(labels), int(labels.fraud.sum())]
     paired = paired_table(points, boots, pairs, split, budgets)
     budget = budget_table(labels, runs, thresholds, split, budgets)
+    tables = {
+        "": main, "paired_": paired, "budget_": budget,
+        "budget_curve_": budget_curve(labels, runs, split),
+        "fp_profile_": fp_profile(labels, runs, split, budgets),
+    }
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    paths = {
-        "main": out_dir / f"results_{name}_{split}.csv",
-        "paired": out_dir / f"results_{name}_paired_{split}.csv",
-        "budget": out_dir / f"results_{name}_budget_{split}.csv",
-    }
-    main.to_csv(paths["main"], index=False, float_format="%.6g")
-    paired.to_csv(paths["paired"], index=False, float_format="%.6g")
-    budget.to_csv(paths["budget"], index=False, float_format="%.6g")
+    paths = {}
+    for kind, df in tables.items():
+        paths[kind] = out_dir / f"results_{name}_{kind}{split}.csv"
+        df.to_csv(paths[kind], index=False, float_format="%.6g")
     log(summary(main, paired, budgets))
     log("wrote " + ", ".join(p.name for p in paths.values()) + f" in {time.time() - t0:.0f}s")
     return main, paired, budget
