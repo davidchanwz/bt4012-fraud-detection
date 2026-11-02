@@ -49,12 +49,14 @@ Also: everyone runs the week 1 pipeline on their own machine; create `docs/genai
 ## Week 2 · Mon 2 Nov – Sun 8 Nov: Features and baselines
 
 ### Evaluation harness (R4) · by Tue 3 Nov
-- [ ] PR-AUC (primary), ROC-AUC (secondary)
-- [ ] Precision / recall / F1 at the val-chosen threshold
-- [ ] Recall, precision, false positives at 1% and 2% budget (+ ceiling); fraud amount caught at each budget
-- [ ] All of the above on `normal_looking` and `normal_looking_strict` subsets
-- [ ] Stratified bootstrap CIs (1,000 resamples) and a **paired** bootstrap for txn vs txn+graph on the same test rows
-- [ ] Unit tests on toy scores
+- [x] PR-AUC (primary), ROC-AUC (secondary)
+- [x] Precision / recall / F1 at the val-chosen threshold
+- [x] Recall, precision, false positives at 1% and 2% budget (+ ceiling); fraud amount caught at each budget
+- [x] All of the above on `normal_looking` and `normal_looking_strict` subsets (+ `normal_looking_q90` for the sensitivity check)
+- [x] Stratified bootstrap CIs (1,000 resamples) and a **paired** bootstrap for txn vs txn+graph on the same test rows
+- [x] Unit tests on toy scores (`tests/test_eval.py`)
+
+Done 2 Nov: `src/eval/metrics.py`, run on val. Output files and conventions in the README, "Evaluation".
 
 ### Graph / behavioural features (R2) · v1 Thu 5 Nov, full Sat 7 Nov
 Each transaction on day *t* uses only days **before** *t* (same-step rows have no reliable order). Compute on the full cleaned data in step order: per-step aggregates, then cumulative sum shifted by one step.

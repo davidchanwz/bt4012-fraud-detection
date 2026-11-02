@@ -46,7 +46,7 @@ Tune by val PR-AUC; reuse the same grids for the graph versions. GNNs are out of
 ## File contracts (so people can work in parallel)
 - `src/features/graph.py` → `data/processed/features_graph.parquet`, columns prefixed `g1_` … `g5_`
 - `src/models/train.py --model {lr,mlp,lgbm} --features {txn,txn_graph,...}` → `reports/scores/{model}_{feature_set}_{split}.parquet` with columns `txn_id, score`; hyperparameters in `reports/tables/hyperparams.csv`
-- `src/eval/metrics.py` reads score files → `reports/tables/results_*.csv`. **Evaluation never retrains; training never computes final metrics.**
+- `src/eval/metrics.py` reads score files → `reports/tables/results_{name}_{split}.csv`, `results_{name}_paired_{split}.csv`, `results_{name}_budget_{split}.csv` (`name` is `main` by default). **Evaluation never retrains; training never computes final metrics.** Conventions (budget queue, subgroup metrics, bootstrap) are in the README, "Evaluation".
 - Detailed R3 plan: `docs/r3_plan.md`.
 
 ## Model code (`src/models/`, built 1 Nov 2026)
@@ -54,7 +54,7 @@ Tune by val PR-AUC; reuse the same grids for the graph versions. GNNs are out of
 - `run_main.py`: the six main runs (3 models × {txn, txn_graph}) in one command, about 4 minutes. Rerun it whenever the graph features change. `hyperparams.csv` records a hash of `graph.py`, so stale scores can be spotted.
 - `interpret.py`: LR coefficients and LightGBM contributions (TreeSHAP via `pred_contrib`, no `shap` dependency), per feature and per group, plus a figure.
 - `case_studies.py`: fraud the graph model flags within the budget and the txn model misses, with the reverse counts. Writes a shortlist CSV; people pick the stories.
-- `results_table.py`: formats R4's `results_main.csv` / `results_paired.csv` into the §4.1 markdown table. The schema (`model, feature_set, split, metric, value, ci_low, ci_high`, and the paired file with `diff`) is a proposal until R4 confirms it.
+- `results_table.py`: formats R4's `results_main.csv` / `results_paired.csv` into the §4.1 markdown table. R4 confirmed the schema on 2 Nov (`model, feature_set, split, metric, value, ci_low, ci_high`, and the paired file with `diff`); R4's files add trailing columns (`subset, n_rows, n_fraud`; paired: `feature_set_base, feature_set_new, subset`) and are named by split, so point the reader at `results_main_{split}.csv` / `results_main_paired_{split}.csv`.
 - `mock_scores.py`: fake score files in `reports/scores_mock/` for building downstream code early. Mock output is gitignored and gets a `_mock` suffix; never use it for report numbers.
 - Tests: `tests/test_models.py` (fits only on train rows, no test access without the flag, deterministic reruns, MLP sample identical across feature sets) and `tests/test_reporting.py`.
 
