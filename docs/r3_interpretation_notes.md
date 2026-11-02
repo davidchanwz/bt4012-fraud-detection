@@ -7,8 +7,10 @@ All numbers here are on **val** (days 120–149) and come from `reports/tables/`
 | Model | txn | txn + graph | Δ |
 |---|---|---|---|
 | LR | 0.729 | 0.909 | +0.181 |
-| MLP (mean ± sd, 5 seeds) | 0.810 ± 0.006 | 0.944 ± 0.003 | +0.134 |
+| MLP (per-seed mean ± sd, 5 seeds) | 0.810 ± 0.006 | 0.944 ± 0.003 | +0.134 |
 | LightGBM | 0.805 | 0.951 | +0.146 |
+
+The MLP row is the average of the 5 seeds' individual PR-AUCs. The MLP score file averages the 5 seeds' *probabilities* instead, and that combined model scores a little higher on val: 0.816 (txn) and 0.950 (txn + graph) in R4's `results_main_val.csv`. Results tables report the combined model; the ± here is only a stability check.
 
 Smoke test (G1 + G3 only): LR 0.782, LightGBM 0.882. Most of the gain needs G2 and/or G5 as well. R2's ablation will say which.
 
