@@ -2,7 +2,13 @@
 
 Usage: python -m src.eda
 (run src.data.clean and src.data.split first)
+
+The normal-looking fraud vs normal-looking legit comparison (figure 07) also needs the
+graph features. Without them it's skipped; after `python -m src.features.graph`, run just
+that part with: python -m src.eda --normal-looking
 """
+import argparse
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -10,7 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from src.config import CLEAN_FILE, FIG_DIR, SPLIT_DIR, TABLE_DIR, TRAIN_END, VAL_END
+from src.config import CLEAN_FILE, FIG_DIR, GRAPH_FILE, SPLIT_DIR, TABLE_DIR, TRAIN_END, VAL_END
 from src.data.split import assign_split
 from src.features.subgroup import fit_thresholds, flag_normal_looking
 
@@ -185,9 +191,160 @@ def subgroup_table(df):
     return t
 
 
-def main():
+# --- normal-looking fraud vs normal-looking legit --------------------------------
+# Does fraud that looks ordinary on amount also look ordinary on history? Train days only,
+# so nothing here looks at val or test. Legit rows are also reweighted to the fraud's
+# category mix ("same-category legit"), because normal-looking fraud sits in a few
+# categories that are rare among legit rows; without that, category differences would be
+# read as history differences.
+
+NL_FEATURES = [   # (column, label, group)
+    ("amount", "amount", "transaction"),
+    ("g1_cust_n_prev", "customer's past transactions", "G1 customer"),
+    ("g1_cust_amt_z", "amount vs customer's usual (z)", "G1 customer"),
+    ("g1_cust_days_since_last", "days since customer's last txn", "G1 customer"),
+    ("g1_cust_n_merchants", "merchants customer paid before", "G1 customer"),
+    ("g2_merch_amt_z", "amount vs merchant's usual (z)", "G2 merchant"),
+    ("g3_pair_is_new", "first time at this merchant", "G3 pair"),
+    ("g3_pair_n_prev", "past txns with this merchant", "G3 pair"),
+    ("g3_pair_days_since_last", "days since last visit to merchant", "G3 pair"),
+    ("g5_merch_fraud_rate", "merchant's known fraud rate", "G5 past labels"),
+    ("g5_cust_fraud_n", "customer's known past fraud", "G5 past labels"),
+]
+
+
+def category_weights(legit_cat, fraud_cat):
+    """Weights that give the legit rows the same category mix as the fraud rows.
+    Categories with no fraud get weight 0."""
+    f = fraud_cat.value_counts(normalize=True)
+    l = legit_cat.value_counts(normalize=True)
+    return legit_cat.map((f / l).fillna(0)).astype(float).to_numpy()
+
+
+def smd(x_fraud, x_legit, w=None):
+    """Standardised mean difference: (fraud mean - legit mean) / pooled sd.
+    w weights the legit rows (None = unweighted). 0.2 is conventionally 'small', 0.8 'large'."""
+    x_fraud, x_legit = np.asarray(x_fraud, float), np.asarray(x_legit, float)
+    w = np.ones(len(x_legit)) if w is None else np.asarray(w, float)
+    m_l = np.average(x_legit, weights=w)
+    var_l = np.average((x_legit - m_l) ** 2, weights=w)
+    sd = np.sqrt((x_fraud.var() + var_l) / 2)
+    return (x_fraud.mean() - m_l) / sd if sd > 0 else np.nan
+
+
+def normal_looking_comparison(train, graph):
+    """Feature table and category mix for normal-looking fraud vs normal-looking legit (train only).
+    train: train split with normal_looking flags; graph: graph features indexed by txn_id."""
+    nl = train[train.normal_looking == 1].join(graph, on="txn_id")
+    f, l = nl[nl.fraud == 1], nl[nl.fraud == 0]
+    w = category_weights(l.category.astype(str), f.category.astype(str))
+    rows = []
+    for col, label, group in NL_FEATURES:
+        rows.append({
+            "feature": col, "label": label, "group": group,
+            "nl_fraud_mean": f[col].mean(), "nl_fraud_median": f[col].median(),
+            "nl_legit_mean": l[col].mean(), "nl_legit_median": l[col].median(),
+            "nl_legit_same_category_mean": np.average(l[col], weights=w),
+            "smd_vs_nl_legit": smd(f[col], l[col]),
+            "smd_vs_same_category_legit": smd(f[col], l[col], w),
+        })
+    feat = pd.DataFrame(rows)
+    counts = nl.groupby(["category", "fraud"], observed=True).size().unstack(fill_value=0)
+    mix = pd.DataFrame({"nl_fraud": counts.get(1, 0), "nl_legit": counts.get(0, 0)})
+    mix["share_of_nl_fraud"] = mix.nl_fraud / mix.nl_fraud.sum()
+    mix["share_of_nl_legit"] = mix.nl_legit / mix.nl_legit.sum()
+    mix["fraud_rate_within_nl"] = mix.nl_fraud / (mix.nl_fraud + mix.nl_legit)
+    mix = mix.sort_values(["nl_fraud", "nl_legit"], ascending=False).rename_axis("category").reset_index()
+    mix["category"] = mix.category.astype(str)
+    return feat, mix, (f, l, w)
+
+
+def fig_normal_looking(feat, mix, rows, by_cat):
+    f, l, w = rows
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5.6), gridspec_kw={"width_ratios": [1, 0.9, 1.35]},
+                             layout="constrained")   # per-panel spacing; (c) has long labels
+
+    # (a) category mix: fraud's categories are rare among legit rows
+    ax = axes[0]
+    has_fraud = mix[mix.nl_fraud > 0]
+    rest = mix[mix.nl_fraud == 0]
+    labels = has_fraud.category.tolist() + [" / ".join(rest.category) + "\n(no fraud)"]
+    sf = has_fraud.share_of_nl_fraud.tolist() + [0.0]
+    sl = has_fraud.share_of_nl_legit.tolist() + [rest.share_of_nl_legit.sum()]
+    y = np.arange(len(labels))[::-1]
+    ax.barh(y + 0.2, np.array(sf) * 100, height=0.38, color=FRAUD_C, label="normal-looking fraud")
+    ax.barh(y - 0.2, np.array(sl) * 100, height=0.38, color=LEGIT_C, label="normal-looking legit")
+    ax.set_yticks(y, labels, fontsize=8)
+    ax.set_xlabel("% of the group's transactions")
+    ax.set_title("(a) Category: not ordinary", loc="left", fontsize=10)
+    ax.legend(frameon=False, fontsize=8, loc="upper right")
+    ax.grid(axis="y", visible=False)
+
+    # (b) amount within its category, as a share of the normal-looking cut
+    ax = axes[1]
+    cut = lambda d: d.amount / d.category.astype(str).map(by_cat.rename(index=str))
+    bins = np.linspace(0, 1, 26)
+    for d, wt, c, name in [(f, None, FRAUD_C, "fraud"), (l, w, LEGIT_C, "legit, same categories")]:
+        x = cut(d)
+        wt = np.ones(len(x)) if wt is None else wt
+        ax.hist(x, bins=bins, weights=wt / wt.sum() * 100, histtype="step", lw=2, color=c, label=name)
+    ax.set_xlabel("amount ÷ the category's normal-looking cut (train legit P95)")
+    ax.set_ylabel("% of the group's transactions")
+    ax.set_title("(b) Amount within category: overlaps, a bit higher", loc="left", fontsize=10)
+    ax.legend(frameon=False, fontsize=8, loc="upper right")
+
+    # (c) history: which differences survive once category is matched
+    ax = axes[2]
+    t = feat.iloc[::-1].reset_index(drop=True)
+    yy = np.arange(len(t))
+    ax.axvspan(-0.2, 0.2, color="#efeeea", zorder=0)
+    ax.axvline(0, color=GREY, lw=1, zorder=1)
+    ax.hlines(yy, t.smd_vs_nl_legit, t.smd_vs_same_category_legit, color="#c3c2b7", lw=1.5, zorder=2)
+    ax.scatter(t.smd_vs_nl_legit, yy, s=36, facecolor="white", edgecolor=GREY, lw=1.5, zorder=3,
+               label="vs all normal-looking legit")
+    ax.scatter(t.smd_vs_same_category_legit, yy, s=44, color=FRAUD_C, zorder=4,
+               label="vs legit in the same categories")
+    ax.set_yticks(yy, [f"{lab}  [{g.split()[0]}]" for lab, g in zip(t.label, t.group)], fontsize=8)
+    ax.set_xlabel("fraud minus legit, in standard deviations (grey band: |difference| < 0.2)")
+    ax.set_title("(c) History: what still differs within category", loc="left", fontsize=10)
+    ax.set_ylim(-0.6, len(t) + 0.9)                 # headroom so the legend clears the top row
+    ax.legend(frameon=False, fontsize=8, loc="upper left", ncol=2)
+    ax.grid(axis="y", visible=False)
+
+    fig.suptitle(f"Normal-looking fraud ({len(f):,}) vs normal-looking legit ({len(l):,}), "
+                 "train days 0–119", x=0.01, ha="left", fontsize=12)
+    fig.savefig(FIG_DIR / "07_normal_looking_fraud_vs_legit.png", bbox_inches="tight")   # not save(): no tight_layout
+    plt.close(fig)
+    print("saved 07_normal_looking_fraud_vs_legit.png")
+
+
+def normal_looking_section():
+    if not GRAPH_FILE.exists():
+        print(f"skipped figure 07: {GRAPH_FILE.name} missing (run src.features.graph, "
+              "then python -m src.eda --normal-looking)")
+        return None
+    train = pd.read_parquet(SPLIT_DIR / "train.parquet")
+    by_cat, global_cut = fit_thresholds(train)
+    train = train.join(flag_normal_looking(train, by_cat, global_cut))
+    feat, mix, rows = normal_looking_comparison(train, pd.read_parquet(GRAPH_FILE))
+    feat.round(4).to_csv(TABLE_DIR / "normal_looking_comparison.csv", index=False)
+    mix.round(4).to_csv(TABLE_DIR / "normal_looking_category_mix.csv", index=False)
+    fig_normal_looking(feat, mix, rows, by_cat)
+    print(feat[["label", "nl_fraud_mean", "nl_legit_mean", "nl_legit_same_category_mean",
+                "smd_vs_nl_legit", "smd_vs_same_category_legit"]].round(3).to_string(index=False))
+    return feat, mix
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description="Week-1 EDA figures and tables")
+    p.add_argument("--normal-looking", action="store_true",
+                   help="only the normal-looking fraud vs legit comparison (figure 07)")
+    a = p.parse_args(argv)
     FIG_DIR.mkdir(parents=True, exist_ok=True)
     TABLE_DIR.mkdir(parents=True, exist_ok=True)
+    if a.normal_looking:
+        normal_looking_section()
+        return
     df = pd.read_parquet(CLEAN_FILE)
 
     fig_over_time(df)
@@ -198,6 +355,7 @@ def main():
     fig_merchants(df)
     fig_customers(df)
     subgroup_table(df)
+    normal_looking_section()
 
     print()
     print(t.round(4).to_string())

@@ -1,0 +1,16 @@
+category,nl_fraud,nl_legit,share_of_nl_fraud,share_of_nl_legit,fraud_rate_within_nl
+sportsandtoys,453,1482,0.3065,0.0042,0.2341
+health,390,7949,0.2639,0.0226,0.0468
+wellnessandbeauty,165,9111,0.1116,0.0259,0.0178
+travel,118,109,0.0798,0.0003,0.5198
+hotelservices,98,737,0.0663,0.0021,0.1174
+home,63,1052,0.0426,0.003,0.0565
+hyper,51,4155,0.0345,0.0118,0.0121
+otherservices,48,535,0.0325,0.0015,0.0823
+tech,33,1303,0.0223,0.0037,0.0247
+fashion,27,3745,0.0183,0.0107,0.0072
+barsandrestaurants,26,4578,0.0176,0.013,0.0056
+leisure,6,20,0.0041,0.0001,0.2308
+transportation,0,302878,0.0,0.8614,0.0
+food,0,13449,0.0,0.0382,0.0
+contents,0,507,0.0,0.0014,0.0

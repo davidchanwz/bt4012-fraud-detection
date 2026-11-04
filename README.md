@@ -35,6 +35,7 @@ uv run python -m src.data.clean      # -> data/processed/banksim_clean.parquet
 uv run python -m src.data.split      # -> data/processed/splits/{train,val,test}.parquet
 uv run python -m src.eda             # -> reports/figures/*.png, reports/tables/*.csv
 uv run python -m src.features.graph  # -> data/processed/features_graph.parquet (graph features, week 2)
+uv run python -m src.eda --normal-looking   # -> figure 07: normal-looking fraud vs legit (needs the graph features)
 uv run pytest -q                     # sanity checks
 uv run jupyter lab                   # notebooks
 ```
