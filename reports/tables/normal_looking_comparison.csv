@@ -1,0 +1,12 @@
+feature,label,group,nl_fraud_mean,nl_fraud_median,nl_legit_mean,nl_legit_median,nl_legit_same_category_mean,smd_vs_nl_legit,smd_vs_same_category_legit
+amount,amount,transaction,157.5651,100.14,29.1866,25.24,123.321,0.7377,0.1544
+g1_cust_n_prev,customer's past transactions,G1 customer,31.1488,19.5,51.7048,50.0,37.9018,-0.6417,-0.2053
+g1_cust_amt_z,amount vs customer's usual (z),G1 customer,0.5469,-0.1716,-0.1026,-0.2404,1.7632,0.3395,-0.4332
+g1_cust_days_since_last,days since customer's last txn,G1 customer,5.2456,1.0,1.5876,1.0,5.4328,0.58,-0.022
+g1_cust_n_merchants,merchants customer paid before,G1 customer,8.0332,7.0,5.7392,6.0,5.0129,0.4831,0.6265
+g2_merch_amt_z,amount vs merchant's usual (z),G2 merchant,-0.4636,-0.5466,-0.1303,-0.1968,-0.316,-0.4828,-0.2455
+g3_pair_is_new,first time at this merchant,G3 pair,0.5683,1.0,0.0915,0.0,0.7523,1.1766,-0.3959
+g3_pair_n_prev,past txns with this merchant,G3 pair,1.9479,0.0,27.9534,22.0,0.379,-1.4675,0.4999
+g3_pair_days_since_last,days since last visit to merchant,G3 pair,23.2693,30.0,4.9147,1.0,27.1113,1.8266,-0.4188
+g5_merch_fraud_rate,merchant's known fraud rate,G5 past labels,0.3913,0.3427,0.0049,0.0,0.1401,1.9551,1.001
+g5_cust_fraud_n,customer's known past fraud,G5 past labels,10.4844,2.0,0.3849,0.0,0.6609,0.7181,0.6914
