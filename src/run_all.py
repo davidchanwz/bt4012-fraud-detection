@@ -71,6 +71,7 @@ def eval_steps(split):
         Step("eval", "src.eval.metrics", ("--split", split, "--models", "rf", "--name", "rf"),
              (ROOT / rf_main,)),
         Step("eval", "src.eval.figures", ("--split", split), (FIG_DIR / f"budget_curve_{split}.png",)),
+        Step("eval", "src.eval.business", ("--split", split), (TABLE_DIR / f"business_{split}.csv",)),
         Step("eval", "src.models.results_table", ("--split", split), (TABLE_DIR / f"results_main_{split}.md",)),
         Step("eval", "src.models.results_table",
              ("--split", split, "--main", rf_main, "--paired", rf_paired, "--out", rf_md), (ROOT / rf_md,)),
