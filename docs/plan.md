@@ -113,7 +113,7 @@ Leakage tests (`tests/test_features.py`):
 - [x] Smoke-test a txn + features-v1 run on Thu 5 Nov (done 1 Nov)
 
 ### Reproducibility (R1)
-- [ ] `python -m src.run_all` so the whole pipeline runs without bash (Windows users, markers)
+- [x] `python -m src.run_all` so the whole pipeline runs without bash (Windows users, markers) (done 5 Nov; full run on a clean clone took about 11 min, 18 steps. Not yet run on Windows)
 
 **Checkpoint Sun 8 Nov:** baseline results table reviewed, feature pipeline merged, all tests green.
 

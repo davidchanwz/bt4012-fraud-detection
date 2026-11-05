@@ -94,7 +94,7 @@ Report outline (about 11 pages): §1 Problem 1 · §2 Data 1.5 · §3.1–3.2 fe
 - Environment: `uv` only. Add packages with `uv add`, then commit `pyproject.toml`, `uv.lock` and a re-exported `requirements.txt` together:
   `uv export --format requirements-txt --no-hashes --no-dev --no-emit-project > requirements.txt`. Never `pip install` into the venv.
 - First-time setup on macOS: `brew install uv libomp`, then `uv sync`. LightGBM needs libomp; without it `import lightgbm` fails with `Library not loaded: @rpath/libomp.dylib`. Don't work around it with `DYLD_LIBRARY_PATH`.
-- Run scripts as modules: `uv run python -m src.<package>.<script>`. Tests: `uv run pytest -q`. Week 1 pipeline: `./run_week1.sh`, then `uv run python -m src.features.graph`. `data/processed/` is gitignored and must be rebuilt on each machine.
+- Run scripts as modules: `uv run python -m src.<package>.<script>`. Tests: `uv run pytest -q`. Whole pipeline: `uv run python -m src.run_all` (`--dry-run` lists the steps; test split only with `--score-test`). Week 1 only: `./run_week1.sh`, then `uv run python -m src.features.graph`. `data/processed/` is gitignored and must be rebuilt on each machine.
 - One branch per work package; merge through a PR reviewed by one other person. Written standup in the group chat Mon / Wed / Fri; 30-minute call each Sunday.
 - Results come from scripts, not notebook cells. Seeds are fixed (`SEED` in `src/config.py`); reruns give identical outputs.
 - Don't touch split boundaries or the subgroup definition.
