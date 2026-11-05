@@ -17,7 +17,7 @@ import argparse
 import pandas as pd
 
 from src.config import ROOT, TABLE_DIR
-from src.models.grids import MODELS
+from src.models.grids import MAIN_MODELS, MODELS
 
 # recall@1% can't exceed this on test: 1,113 alerts for 1,200 fraud (see docs/plan.md).
 # Used only when the results file has no max_recall_at_1pct row (R4's files do, for every split).
@@ -31,7 +31,7 @@ METRICS = [            # (column, label); only those present in the file are sho
     ("recall_at_2pct", "Recall @2%"),
     ("recall_at_1pct_normal_looking", "Recall @1% (normal-looking)"),
 ]
-MODEL_LABELS = {"lr": "Logistic regression", "mlp": "MLP", "lgbm": "LightGBM"}
+MODEL_LABELS = {"lr": "Logistic regression", "mlp": "MLP", "lgbm": "LightGBM", "rf": "Random forest"}
 FS_LABELS = {"txn": "txn", "txn_graph": "txn + graph"}
 
 MAIN_COLS = ["model", "feature_set", "split", "metric", "value", "ci_low", "ci_high"]

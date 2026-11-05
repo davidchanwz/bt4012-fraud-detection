@@ -11,6 +11,8 @@ dependencies = [
     "scikit-learn>=1.5",
     "matplotlib>=3.9",
     "lightgbm>=4.7.0",
+    "streamlit>=1.66",
+    "plotly>=7.1",
 ]
 
 [dependency-groups]

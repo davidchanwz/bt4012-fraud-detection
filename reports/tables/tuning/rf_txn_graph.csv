@@ -1,0 +1,7 @@
+params,val_pr_auc,seconds
+"{""max_depth"": 20, ""min_samples_leaf"": 1}",0.9284403404996351,10.0
+"{""max_depth"": 20, ""min_samples_leaf"": 5}",0.9318310717802888,10.0
+"{""max_depth"": 20, ""min_samples_leaf"": 20}",0.8990431206292727,9.9
+"{""max_depth"": null, ""min_samples_leaf"": 1}",0.9439515506105807,10.3
+"{""max_depth"": null, ""min_samples_leaf"": 5}",0.9308590748282335,10.8
+"{""max_depth"": null, ""min_samples_leaf"": 20}",0.8968983671466222,11.7

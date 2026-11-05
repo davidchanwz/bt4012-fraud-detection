@@ -3,18 +3,19 @@
     python -m src.models.run_main                  # val scores only (weeks 2-3)
     python -m src.models.run_main --score-test     # at the freeze, once
     python -m src.models.run_main --models lr lgbm # subset
+    python -m src.models.run_main --models rf      # Random Forest robustness check (not in the main six)
 
 Same grids as src/models/grids.py for every run (see src/models/train.py).
 """
 import argparse
 
-from src.models.grids import MODELS
+from src.models.grids import MAIN_MODELS, MODELS
 from src.models.train import run
 
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--models", nargs="+", default=MODELS, choices=MODELS)
+    p.add_argument("--models", nargs="+", default=MAIN_MODELS, choices=MODELS)
     p.add_argument("--features", nargs="+", default=["txn", "txn_graph"], choices=["txn", "txn_graph"])
     p.add_argument("--score-test", action="store_true")
     a = p.parse_args(argv)

@@ -16,6 +16,9 @@ Smoke test (G1 + G3 only): LR 0.782, LightGBM 0.882. Most of the gain needs G2 a
 
 The graph gain is much bigger than week 1 expected ("may be small"). That is good news for the project, but treat it with care until R4's paired bootstrap and R2's ablation are in. Point estimates on val are not the result.
 
+## Random Forest (robustness check, val)
+Val PR-AUC 0.791 (txn) → 0.944 (txn + graph); paired Δ +0.153 [0.136, 0.171] in `results_rf_paired_val.csv`. Recall@1% on normal-looking fraud goes from 0.19 to 0.58. So the graph gain is not specific to the three main models: it shows up in a fourth, different family (bagged trees). The jump is of the same size as LightGBM's. These are val numbers; the appendix table uses test after the freeze. The best settings were deep trees with small leaves (`min_samples_leaf` 5 for txn, 1 for txn + graph).
+
 ## What LightGBM relies on (`lgbm_importance_groups_txn_graph_val.csv`)
 Share of mean |contribution| by group: customer history 27%, transaction 22%, merchant history 21%, edge 15%, past labels 15%. **G5 does not dominate.** The label-free groups (G1–G3) carry about 63% between them. So the gain is not just "past labels in disguise", though R2's labels-only vs label-free ablation is the proper test.
 

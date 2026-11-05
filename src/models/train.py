@@ -4,7 +4,7 @@ Protocol (agreed at kickoff): fit on train, pick hyperparameters by val PR-AUC,
 score test ONCE at the freeze. Test labels are never read here. Test features are
 only built when --score-test is passed, so nothing can be tuned on test by accident.
 
-    python -m src.models.train --model {lr,mlp,lgbm} --features {txn,txn_graph}
+    python -m src.models.train --model {lr,mlp,lgbm,rf} --features {txn,txn_graph}
         [--groups g1,g3]     only these graph groups (R2's ablation)
         [--delay 1]          use the 1-day label-delay graph features
         [--score-test]       also write test scores (freeze only)
@@ -15,7 +15,8 @@ Outputs:
     reports/tables/tuning/{model}_{feature_set}.csv         val PR-AUC for every grid point
     models/{model}_{feature_set}.joblib                     fitted model(s) + transformers (gitignored)
 
-Imbalance: LR uses class_weight="balanced", LightGBM scale_pos_weight, and the MLP
+Imbalance: LR uses class_weight="balanced", LightGBM scale_pos_weight, Random Forest
+class_weight="balanced_subsample" (a robustness model: raw graph columns, 300 trees), and the MLP
 trains on all train fraud plus 10 legit rows per fraud (same sample for txn and
 txn_graph). The MLP is fitted with 5 seeds; its score is the mean of the 5
 probabilities, and the grid point is chosen by mean val PR-AUC over the seeds.
@@ -68,8 +69,13 @@ def _fit_lgbm(params, X_tr, y_tr, X_va, y_va):
     return [m], ap, {"best_iteration": int(m.best_iteration_ or m.n_estimators), "scale_pos_weight": spw}
 
 
+def _fit_rf(params, X_tr, y_tr, X_va, y_va):
+    m = make_model("rf", params).fit(X_tr, y_tr)
+    return [m], average_precision_score(y_va, m.predict_proba(X_va)[:, 1]), {}
+
+
 def predict(models, X):
-    """Mean positive-class probability over the fitted model(s) (one for LR/LGBM, 5 for MLP)."""
+    """Mean positive-class probability over the fitted model(s) (one for LR/LGBM/RF, 5 for MLP)."""
     return np.mean([m.predict_proba(X)[:, 1] for m in models], axis=0)
 
 
@@ -81,6 +87,8 @@ def tune(model, X_tr, y_tr, X_va, y_va, train, log=print):
             models, ap, extra = _fit_lr(params, X_tr, y_tr, X_va, y_va)
         elif model == "mlp":
             models, ap, extra = _fit_mlp(params, X_tr, y_tr, X_va, y_va, train)
+        elif model == "rf":
+            models, ap, extra = _fit_rf(params, X_tr, y_tr, X_va, y_va)
         else:
             models, ap, extra = _fit_lgbm(params, X_tr, y_tr, X_va, y_va)
         rows.append({"params": json.dumps(params), "val_pr_auc": ap,
@@ -134,7 +142,7 @@ def run(model, features, groups=None, delay=LABEL_DELAY, score_test=False,
         graph = load_graph(features, delay)
 
     train, val = splits["train"], splits["val"]
-    builder = FeatureBuilder(features, groups, scale_graph=(model != "lgbm")).fit(train, graph)
+    builder = FeatureBuilder(features, groups, scale_graph=(model not in ("lgbm", "rf"))).fit(train, graph)
     X_tr, X_va = builder.transform(train, graph), builder.transform(val, graph)
     y_tr = pd.Series(train.fraud.to_numpy(), index=X_tr.index)
     y_va = val.fraud.to_numpy()

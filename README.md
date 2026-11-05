@@ -78,6 +78,18 @@ Figures, drawn only from those tables: `uv run python -m src.eval.figures [--spl
 
 CIs are 95% percentile intervals from a stratified bootstrap (fraud and legit resampled separately, seed from `src/config.py`). The budget queue is the top `floor(budget × n)` rows of the whole split, ties broken by lower `txn_id`; subgroup recall at a budget is the share of that subgroup's fraud that lands in this same queue. Python helper for model selection: `from src.eval.metrics import score_predictions`.
 
+## Run the dashboard (stretch)
+
+An interactive, read-only view of the results tables. Sidebar controls (split, model, features, fraud subset) apply to every tab: review-budget simulator, scoreboard, why graph features, case viewer, false positives, ablation and label delay.
+
+```bash
+uv run streamlit run app/main.py      # opens http://localhost:8501
+uv run python tests/app_check.py --empty    # headless check, no browser: renders every tab under 48 sidebar
+                                              # selections, with and without the tables (~1 min, prints 'All OK')
+```
+
+It only reads `reports/tables/` (committed), so it works on a fresh clone without retraining. The case viewer's customer-history panel also reads `data/processed/` and shows a notice if that folder hasn't been rebuilt. It never trains, scores or recomputes a metric; the one derived number is analyst hours (alerts per day × an editable minutes-per-review assumption). Sources that don't exist yet (the ablation, the test split) show a "waiting on" card listing the files that will fill them in. Theme: `.streamlit/config.toml`; shared look: `app/ui.py`; loaders: `app/data.py`.
+
 ## Data split
 
 | split | days (`step`) | txns | fraud |
@@ -109,6 +121,7 @@ src/
   eval/metrics.py      score files -> results tables with CIs (R4)
   eval/figures.py      budget-curve figure from the results tables
   eda.py               figures + tables
+app/                   Streamlit dashboard (read-only on reports/tables): main.py, data.py, ui.py, tabs/
 tests/                 pytest sanity checks (cleaning, split leakage, subgroup,
                        graph-feature leakage, model training contract)
 docs/

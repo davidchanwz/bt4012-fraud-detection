@@ -46,6 +46,37 @@ File contracts, so everyone can work in parallel:
 
 Also: everyone runs the week 1 pipeline on their own machine; create `docs/genai_log.md`.
 
+## Added after proposal feedback · 4 Nov 2026
+The markers said the topic is appropriate and the dataset, preprocessing and method have no obvious issues. They asked for four things. Two became new work items (A, B); the other two are already planned and are listed in C so they get written up.
+
+### A. EDA: normal-looking fraud vs normal transactions · by Wed 11 Nov
+Owner to confirm in the group chat. Suggested: R1 David (owns the EDA and §2), with R4 Rayson on the subgroup side.
+
+Why: it shows that on amount and category alone, normal-looking fraud is hard to tell from legit, and that history features are what separate them. That is the motivation for the whole project. It also feeds tab 1 of the dashboard (see the stretch section).
+- [ ] Script, not a notebook cell: `src/eda_subgroup.py`, run with `uv run python -m src.eda_subgroup`. Compare three groups on **train** (val as a check, never test): normal-looking fraud, normal-looking **legit** (the fair control: same amount range), and the rest of the fraud (obvious fraud, for contrast).
+- [ ] Transaction-level view: amount distribution, category mix, age/gender. The hypothesis to test is that these look similar for normal-looking fraud and normal-looking legit. If they don't, report that.
+- [ ] History view from `features_graph.parquet`, for example `g3_pair_is_new`, `g1_cust_n_prev`, `g1_cust_amt_z`, `g2_merch_amt_z`, `g2_merch_n_customers` and the G5 rates. One effect-size number per feature (standardised mean difference) plus a figure.
+- [ ] Outputs: `reports/figures/07_normal_looking_vs_legit.png`, `reports/tables/normal_looking_comparison.csv` (effect size per feature), and `reports/tables/normal_looking_feature_hist.csv` (tidy binned counts per feature and group, so the dashboard can redraw the plot without touching raw data). Cite in §2 (R1) and §4.3 (R4).
+- [ ] One line tying it to the model result: the txn-only model's recall on the normal-looking subgroup, from R4's subgroup tables.
+- Caveat to state: `g1_cust_n_prev` is probably a BankSim artifact (`docs/r3_interpretation_notes.md`), so don't let the story rest on it alone.
+
+### B. Random Forest as a fourth model (R3) · implemented 4 Nov; group agreed 4 Nov
+Why: the markers asked whether graph features still help across model types. We have linear (LR), neural (MLP) and boosted trees (LightGBM); Random Forest adds bagged trees. **XGBoost is deliberately not added**: it is too close to LightGBM to add evidence. Say so in §3.3.
+
+Scope: a robustness check, not a headline. The main table stays 3 models × {txn, txn+graph}. RF gets one appendix table (PR-AUC and recall@1%, txn vs txn+graph, with the paired difference) and one sentence in §4.1. The group agreed on 4 Nov.
+- [x] `src/models/grids.py`: add `rf` (sklearn `RandomForestClassifier`, `class_weight="balanced_subsample"`, `n_jobs=-1`, `random_state=SEED`, `max_features="sqrt"`, 300 trees). Grid `max_depth` {20, None} × `min_samples_leaf` {1, 5, 20}: a probe on val showed `min_samples_leaf` matters a lot (PR-AUC about 0.90 at 20 against 0.94 at 1), so the first-planned {5, 20} would have missed the best region. One fit takes about 10 s, so the grid is cheap. Keep the list of all models separate from the six main runs, so `run_main` still defaults to LR, MLP and LightGBM.
+- [x] `src/models/train.py`: `--model rf`, raw (unscaled) graph columns like LightGBM, same protocol (tune on val PR-AUC; test only with `--score-test`).
+- [x] `tests/test_models.py`: RF on the toy data, same score-file contract (`rf_{feature_set}_{split}.parquet`).
+- [x] `results_table.py` knows `rf`. R4's `src/eval/metrics.py` has `MODELS = ("lr", "mlp", "lgbm")`, which is the default of its `--models` flag. That is deliberate: RF is **not** in the main table, and the RF run uses `--models rf --name rf`, which writes separate `results_rf_*` files. No change to R4's code is needed.
+- [x] `docs/report/3_3_models.md` (why RF, why not XGBoost) and `docs/r3_plan.md` item 8.
+- [x] Val run: `uv run python -m src.models.run_main --models rf`, then `uv run python -m src.eval.metrics --split val --models rf --name rf` (4 Nov). Val PR-AUC 0.791 → 0.944 (txn → txn+graph).
+- [ ] At the freeze: `run_main --models rf --score-test`, then `metrics --split test --models rf --name rf`. Appendix table: `uv run python -m src.models.results_table --split test --main reports/tables/results_rf_test.csv --paired reports/tables/results_rf_paired_test.csv --out reports/tables/results_rf_test.md`.
+
+### C. Already planned; tracked here so they get written up
+- **GNN ("if time permits")**: stays out of scope. §5 (R1) says why (time, and keeping the comparison fair) and names it as future work.
+- **Graph construction, feature engineering and model selection, with reasons**: §3.1–3.2 (R2) must say how the customer–merchant graph is built, why each feature group is included and why the leakage rules matter. §3.3 (R3) justifies the models. §4.1–4.2 explain *why* gains differ by model and feature group, not only that they do.
+- **Practical implications, limitations, reproducibility**: §4.5 and §5 (R1). Limitations to name: simulated data, exactly 40 fraud per day, the `g1_cust_n_prev` artifact, almost no cold start, one chronological split. Reproducibility: `src/run_all.py` (R1), fixed seeds, `uv.lock`, fresh-clone test on Thu 19.
+
 ## Week 2 · Mon 2 Nov – Sun 8 Nov: Features and baselines
 
 ### Evaluation harness (R4) · by Tue 3 Nov
@@ -70,10 +101,10 @@ Each transaction on day *t* uses only days **before** *t* (same-step rows have n
 | G5 past labels | smoothed merchant fraud rate; customer prior fraud count; only labels older than the delay | full |
 
 Leakage tests (`tests/test_features.py`):
-- [ ] Truncation: recompute using only days ≤ *t*; rows on day *t* must match the full-data result exactly
-- [ ] Label shuffle: shuffle labels inside the delay window and after; G5 must not change
-- [ ] Day 0: every row on step 0 has zero history
-- [ ] One-line definition of every feature in `docs/data_dictionary.md`
+- [x] Truncation: recompute using only days ≤ *t*; rows on day *t* must match the full-data result exactly
+- [x] Label shuffle: shuffle labels inside the delay window and after; G5 must not change
+- [x] Day 0: every row on step 0 has zero history
+- [x] One-line definition of every feature in `docs/data_dictionary.md`
 
 ### Baselines (R3) · by Fri 6 Nov
 - [x] LR (`class_weight="balanced"`, grid over C), MLP (5 seeds, mean ± sd), LightGBM (`scale_pos_weight`)
@@ -107,23 +138,38 @@ Leakage tests (`tests/test_features.py`):
 - **Fri 20:** submit by midday, not at 23:59. Check the file names (a wrong name costs 2% of that component) and that the repo is accessible.
 
 ## Stretch: UI / webapp (only after the base plan is satisfied)
-A UI is rewarded, but it must never put the required deliverables at risk. **Do not start until all of these are true:**
-- [ ] Results frozen and `v-results` tagged (Sun 15 Nov)
-- [ ] Report §3–4 drafted, slides finished, all tests green
-- [ ] Owner agreed in the group chat (someone with spare time, not whoever is behind on their report section)
+A UI is rewarded, but it must never put the required deliverables at risk.
+
+**Started early, 4 Nov (R3 Aayush, with Claude Code).** Originally planned to start only after the freeze. It was started on val data instead because it reads only committed tables, so it can't change any result and costs no one else time. The rules below still hold: nothing in the report depends on it, the Tue 17 Nov cut-off stands, and the test split appears in it automatically once the freeze files exist. Pending sources show a "waiting on" card and fill in when their files land:
+- [x] Shell: `app/main.py` (sidebar + six tabs), `app/data.py` (read-only loaders, missing file = empty state), `app/ui.py` (palette, chart style, tiles), `.streamlit/config.toml`, `tests/app_check.py` (renders every tab under every sidebar selection, with and without the tables)
+- [x] Tabs 1, 2, 4, 5 on real val data; tabs 3 and 6 with interim content until item A and R2's ablation exist (4 Nov; each tab reviewed against the CSVs; `tests/test_app.py` in the suite)
+- [x] Tab 3 full view from R4's item-A tables (`normal_looking_comparison.csv`, `normal_looking_category_mix.csv`, figure 07; merged 4 Nov, PR #8): category mix, SMD against all normal-looking legit and against same-category legit, per-feature detail
+- [ ] Tab 6 full view: needs R2's evaluated ablation and label-delay results (`metrics.py ... --name ablation`; the app reads any results family with non-standard feature sets)
+- [ ] Test split: appears once `results_main_test.csv` exists (freeze). For the case viewer on test, run in this order after `--score-test`: `uv run python -m src.models.case_studies --model lgbm --split test` (and `--budget 0.02`, and `--model lr`), then `uv run python -m src.models.interpret --model lgbm --split test` (it writes contributions only for shortlists that already exist)
+- [ ] Screenshot for the appendix and ~1 min demo clip (after the freeze)
 
 Rules:
-- **Read-only on frozen outputs.** The app reads `reports/tables/*.csv`, `reports/scores/*.parquet` and `data/processed/`. It never retrains, recomputes metrics or produces a number that isn't already in `reports/tables/`. Otherwise the app and the report could disagree.
-- Single page-per-idea Streamlit app in `app/`, started with `uv run streamlit run app/main.py`. Add it with `uv add streamlit` (plus `plotly` if needed) and re-export `requirements.txt`.
+- **Read-only on frozen outputs.** The app reads `reports/tables/*.csv` and `data/processed/` (case viewer history only). It never retrains, recomputes metrics or produces a number that isn't already in `reports/tables/`. Otherwise the app and the report could disagree. The one derived number is analyst hours from an editable minutes-per-review assumption.
+- Streamlit app in `app/`, started with `uv run streamlit run app/main.py`. Built with Streamlit's own widgets and Plotly (`uv add streamlit plotly`, done 4 Nov); no third-party component libraries (the shadcn wrapper renders in iframes and ignores the theme; the antd and option-menu wrappers are unmaintained since 2024).
 - **Cut-off Tue 17 Nov evening.** If it isn't working by then, drop it. Nothing in the report, slides or video may depend on it. If it works, it gets a short demo clip (~1 min) in the video and a screenshot in the report appendix.
 - The README gets a "Run the app" section. The fresh-clone test on Thu 19 must still pass with or without the app.
 
-Candidate pages (build in this order, stop whenever time runs out):
-1. **Results explorer.** Pick model × feature set × metric and see test results with bootstrap CIs, the paired difference (txn vs txn+graph), and the recall@1% ceiling (92.75%) drawn as a reference line.
-2. **Review-budget simulator.** A slider for the review budget (0.5%–5%) updates recall, precision, false positives, fraud value caught, analyst reviews per day and analyst hours (stated minutes-per-review assumption, matching §4.5). Toggle "all fraud" vs "normal-looking fraud only" and "txn" vs "txn+graph".
-3. **Alert queue and case viewer.** A ranked list of the top-scoring test transactions for the chosen model, with the score, amount, category and whether the txn was in the normal-looking subgroup. Clicking one shows the customer's past transactions, whether this customer–merchant pair is new, and the top feature contributions (SHAP for LightGBM, coefficients for LR). Pre-select the 3–4 case studies of fraud only the graph model caught.
-4. **Customer–merchant graph view.** For a selected customer: their merchants as a small network, edges sized by prior transaction count, the flagged transaction highlighted. Optional day slider that shows the graph as it looked before that day, which also illustrates the leakage rule.
-5. **Ablation and label-delay page.** Bar chart of the leave-one-group-out ablation and the 7-day vs 1-day G5 comparison, so the "graph structure vs past labels" story is interactive.
+Form: one Streamlit **dashboard**, not a set of static pictures. A sidebar holds controls that apply to every tab; each tab answers one question. Every control only looks up rows that already exist in `reports/tables/` (committed, so a fresh clone works without retraining or the raw data). Nothing is recomputed.
+
+Sidebar controls: split (`val` now; `test` appears only after the freeze), model (LR / MLP / LightGBM / RF), features (`txn` / `txn+graph` / both side by side), subset (all fraud / normal-looking / strict / q90).
+
+Tabs, in build order (stop whenever time runs out):
+1. **Review-budget simulator** (build first; the best demo). A slider for the review budget (0.1%–5%, the 50 points in `results_main_budget_curve_{split}.csv`). It updates alerts per day, frauds caught, false positives, precision, share of fraud value caught, and draws the recall-vs-budget curve for txn vs txn+graph with the slider position marked and the best-possible-recall ceiling as a reference line. A box for "minutes per review" turns alerts per day into analyst hours (a stated assumption, matching §4.5). Toggling the subset to "normal-looking" shows where the graph features earn their keep.
+2. **Model scoreboard.** Toggle models and feature sets; pick a metric. Bars with bootstrap CIs, the paired txn → txn+graph difference with its interval, and the "CI excludes zero" call. Data: `results_main_{split}.csv`, `results_main_paired_{split}.csv`.
+3. **Why graph features? (interactive EDA, from item A).** Category mix of normal-looking fraud vs legit, then the standardised difference on each history feature against all normal-looking legit and against legit in the same categories, and a per-feature detail view. Data: `normal_looking_comparison.csv`, `normal_looking_category_mix.csv` (R4, train only).
+4. **Why was it flagged? (case viewer).** Choose one of the shortlisted graph-only catches (`case_study_candidates_*.csv`): see its score under each model, the top feature contributions (`case_study_contribs_*.csv`) and the customer's earlier transactions with the new/old customer–merchant link highlighted. The history panel reads `data/processed/` and shows a notice instead if that folder is missing.
+5. **False-positive profile.** Which categories the wasted alerts come from and how many are normal-looking legit. Data: `results_main_fp_profile_{split}.csv`.
+6. **Ablation and label delay** (after R2's results exist). Leave-one-group-out and 7-day vs 1-day as a bar chart you can switch between models.
+Optional if time remains: a customer–merchant network view with a "before day t" slider (illustrates the leakage rule).
+
+Not planned: a box where you type a transaction and get a score. It would need the fitted models, which are gitignored and absent after a fresh clone, and it would print numbers that are not in `reports/tables/`.
+
+Dependencies: `streamlit` and `plotly` (added 4 Nov; `requirements.txt` re-exported).
 
 ## Report outline (aim for 11 pages)
 | Section | Pages | Author |
@@ -147,4 +193,4 @@ Appendix: feature definitions, hyperparameters, extra figures, GenAI acknowledge
 - One branch per work package; merge through a PR reviewed by one other person.
 - Written standup in the group chat Mon / Wed / Fri (done, next, blocked); 30-min call each Sunday.
 - Log GenAI help in `docs/genai_log.md` as you go. Everyone must be able to explain every part of the submission.
-- Out of scope: GNNs (future work only). G4 and the UI/webapp (see the stretch section) are the only stretch items, and the UI is only started after the freeze.
+- Out of scope: GNNs (future work only). G4 and the UI/webapp (see the stretch section) are the only stretch items. The UI was started early (4 Nov) on val data; see the stretch section.

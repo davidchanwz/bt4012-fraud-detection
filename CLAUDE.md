@@ -1,6 +1,18 @@
 # CLAUDE.md: BT4012 Group 07, graph features for fraud detection on BankSim
 
-Team-wide context. This file is for whoever is working in the repo, whatever their role. `docs/plan.md` is the source of truth for dates, owners and checkbox status; don't duplicate its status here. State when this file was written: 1 Nov 2026 (week 1 and R2's graph features are merged to `main`).
+Team-wide context. This file is for whoever is working in the repo, whatever their role. `docs/plan.md` is the source of truth for dates, owners and checkbox status; don't duplicate its status here. Stable context lives here; status lives in `docs/plan.md` (see "Start here" below).
+
+## Start here (for you or your agent)
+Read this file, then `docs/plan.md`. To find out what is done and what is left, check the repo instead of trusting prose:
+1. `docs/plan.md`: `[x]` is done, `[ ]` is open; owners are in the Roles table. The section "Added after proposal feedback" holds the newest items (A: normal-looking vs legit EDA, B: Random Forest, now built, C: items to write up).
+2. `git fetch`, then `git log --oneline -15` and `git branch -r` for merged and in-flight work.
+3. `uv run pytest -q`. Green means the contracts below hold.
+4. `ls reports/tables reports/scores` shows which outputs exist. Test-split outputs only exist after the freeze (Sun 15 Nov).
+5. `docs/genai_log.md` shows who has already done what with AI help.
+
+When you finish something: tick its box in `docs/plan.md`, add a row to `docs/genai_log.md`, and keep this file for stable context (don't paste status here).
+
+Snapshot on 4 Nov 2026, as far as checked (plan.md wins if they differ). **Done:** week 1 data pipeline and EDA; graph features G1–G3 and G5 with leakage tests and the data dictionary (R2); evaluation harness run on val, with budget curves and the false-positive profile (R4); LR, MLP and LightGBM × {txn, txn_graph} val scores, plus Random Forest on val, interpretation, case-study shortlist, §3.3 and §3.4 drafts (R3, R4). **Open:** normal-looking vs legit EDA (owner to confirm); `src/run_all.py` (R1); ablation and label-delay runs (R2); business numbers (R1); the test-split run at the freeze; report, slides and video. **UI stretch:** dashboard started 4 Nov on val data (R3); tab 3 uses R4's item-A tables; tab 6 waits on R2's ablation.
 
 ## Deadline and deliverables
 **Fri 20 Nov 2026, 23:59** (aim to submit by midday). Three files:
@@ -34,6 +46,7 @@ The kickoff decisions were agreed on 1 Nov 2026 on the plan's recommended answer
 - Logistic regression: `class_weight="balanced"`, grid over C.
 - Feedforward NN: sklearn `MLPClassifier`, early stopping, legit rows undersampled in train (same sample for both feature sets), 5 seeds. The score file averages the 5 seeds' probabilities, so every results table reports that 5-seed average. The per-seed sd of val PR-AUC (`hyperparams.csv`) is a separate stability check, not the table's error bar (that's the bootstrap CI).
 - LightGBM: `scale_pos_weight`. Cheap on CPU and makes ablations fast.
+- Random Forest (**added 4 Nov after proposal feedback; group agreed; built and run on val**): sklearn `RandomForestClassifier`, `class_weight="balanced_subsample"`, 300 trees, raw graph columns. A robustness check, not a headline: one appendix table and one sentence in §4.1, main table unchanged. `rf` is in `grids.MODELS` but not in `grids.MAIN_MODELS`, so `run_main` and the main results still cover LR, MLP and LightGBM only. Run it with `run_main --models rf`, evaluate with `metrics --models rf --name rf` (writes `results_rf_*`). XGBoost is deliberately not added (too close to LightGBM).
 Tune by val PR-AUC; reuse the same grids for the graph versions. GNNs are out of scope (future work only).
 
 ## Features
@@ -51,7 +64,7 @@ Tune by val PR-AUC; reuse the same grids for the graph versions. GNNs are out of
 
 ## Model code (`src/models/`, built 1 Nov 2026)
 - `train.py`: one model on one feature set. Fits on train, tunes on val PR-AUC over the grids in `grids.py`, writes val scores. **Test scores are only written with `--score-test`.** Without that flag the test split isn't even loaded; use it once, at the freeze. Other flags: `--groups g1,g3` (graph groups to keep, for the ablation; gives feature set `txn_graph_g1g3`) and `--delay 1` (1-day label-delay file; gives `txn_graph_delay1`).
-- `run_main.py`: the six main runs (3 models × {txn, txn_graph}) in one command, about 4 minutes. Rerun it whenever the graph features change. `hyperparams.csv` records a hash of `graph.py`, so stale scores can be spotted.
+- `run_main.py`: the six main runs (3 models × {txn, txn_graph}) in one command, about 4 minutes. `--models rf` runs the Random Forest check (about 1.5 minutes). Rerun it whenever the graph features change. `hyperparams.csv` records a hash of `graph.py`, so stale scores can be spotted.
 - `interpret.py`: LR coefficients and LightGBM contributions (TreeSHAP via `pred_contrib`, no `shap` dependency), per feature and per group, plus a figure.
 - `case_studies.py`: fraud the graph model flags within the budget and the txn model misses, with the reverse counts. Writes a shortlist CSV; people pick the stories.
 - `results_table.py`: formats R4's `results_main_{split}.csv` / `results_main_paired_{split}.csv` into the §4.1 markdown table (`results_main_{split}.md`; `--split val` now, `--split test` at the freeze). Schema confirmed 2 Nov (`model, feature_set, split, metric, value, ci_low, ci_high`, paired file with `diff`; R4's extra trailing columns are ignored). The recall@1% ceiling is read from R4's `max_recall_at_1pct` row. `tests/test_eval.py` checks the formatter reads R4's real output.
@@ -88,13 +101,16 @@ Report outline (about 11 pages): §1 Problem 1 · §2 Data 1.5 · §3.1–3.2 fe
 - Log GenAI help in `docs/genai_log.md` as you go. Everyone must be able to explain every part of the submission.
 - Report honestly: failing tests, null results and skipped steps get said as they are.
 
-## Stretch scope (only after the base plan is satisfied): UI / webapp
-A UI is rewarded, but it must never put the required deliverables at risk. Full spec in `docs/plan.md`, section "Stretch: UI / webapp". Summary:
-- **Start only when** results are frozen and tagged, report §3–4 are drafted, slides are finished, tests are green, and an owner with spare time is agreed.
-- **Read-only** on frozen outputs (`reports/tables`, `reports/scores`, `data/processed`). It never retrains or computes a number not already in `reports/tables/`.
-- Streamlit app in `app/`, run with `uv run streamlit run app/main.py`. Cut-off **Tue 17 Nov evening**; if not working, drop it. Nothing in the report, slides or video may depend on it. If it works: ~1 min demo clip in the video, a screenshot in the appendix, and a "Run the app" section in the README. The fresh-clone test must pass with or without the app.
-- Pages, in build order: (1) results explorer with CIs, paired differences and the 92.75% ceiling; (2) review-budget simulator (slider for 0.5–5% budget; recall, false positives, fraud value caught, analyst hours; all fraud vs normal-looking; txn vs txn+graph); (3) alert queue and case viewer with feature contributions and the pre-selected case studies; (4) customer–merchant graph view with a "before day *t*" slider; (5) ablation and label-delay page.
+## Stretch scope: UI / webapp (started early, 4 Nov, by R3)
+A UI is rewarded, but it must never put the required deliverables at risk. Full spec and checkboxes in `docs/plan.md`, section "Stretch: UI / webapp". Summary:
+- **Started on val data on 4 Nov** instead of after the freeze, because it only reads committed tables and can't change any result. Sources not built yet (R2's ablation, the test split) show a "waiting on" card and fill in automatically when their files appear. If you produce one of those files, match the names in `app/data.py` (`PENDING`). Tab 3 reads R4's item-A tables; if their columns change, update `app/tabs/eda.py`.
+- **Read-only** on `reports/tables` (and `data/processed` for the case viewer's history panel). It never retrains or computes a number not already in `reports/tables/`; the only derived number is analyst hours from an editable minutes-per-review assumption.
+- Streamlit + Plotly in `app/` (`main.py` sidebar and tabs, `data.py` loaders, `ui.py` shared look, `tabs/*.py` one file per tab; theme in `.streamlit/config.toml`). Run with `uv run streamlit run app/main.py`; headless check `uv run python tests/app_check.py --empty` (about 1 min, ends with "All OK"). Cut-off **Tue 17 Nov evening**; if not working, drop it. Nothing in the report, slides or video may depend on it. If it works: ~1 min demo clip in the video and a screenshot in the appendix. The fresh-clone test must pass with or without the app.
+- It is a **dashboard**, not static pictures: sidebar controls (model, features, subset, split) apply to every tab, and every control looks up precomputed rows in `reports/tables/`. Tabs in build order: (1) review-budget simulator (slider over R4's 50-point budget curve, txn vs txn+graph, analyst hours); (2) model scoreboard with CIs and paired differences; (3) interactive EDA, normal-looking fraud vs legit (plan item A); (4) case viewer with feature contributions; (5) false-positive profile; (6) ablation and label delay. Full spec in `docs/plan.md`.
 - Design for it now: `train.py` keeps fitted models, case studies are selected by script and saved to a CSV, and tables are tidy long-format CSVs.
+
+## Proposal feedback (4 Nov 2026)
+The markers called the topic appropriate and found no obvious issues. They asked for: (1) an EDA comparing normal-looking fraud with normal transactions, to motivate graph features (plan item A); (2) more models such as XGBoost or Random Forest (item B: Random Forest only); (3) a GNN if time permits (stays out of scope, name it as future work in §5); (4) detail and justification for graph construction, feature engineering and model selection, plus practical implications, limitations and reproducibility (item C). Report authors should check item C when writing their sections.
 
 ## Out of scope
 GNNs (future work only). The only stretch items are G4 and the UI/webapp above.
