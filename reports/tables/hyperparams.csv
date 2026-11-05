@@ -2,8 +2,10 @@ model,feature_set,params,val_pr_auc,val_pr_auc_sd,best_iteration,n_features,labe
 lr,txn,"{""C"": 0.001}",0.72881,,,29,,,False,2026-11-01T01:38:25
 mlp,txn,"{""hidden_layer_sizes"": [64, 32], ""alpha"": 0.01}",0.810127,0.006307,,29,,,False,2026-11-01T01:46:24
 lgbm,txn,"{""num_leaves"": 31, ""learning_rate"": 0.05, ""min_child_samples"": 20}",0.805313,,169.0,29,,,False,2026-11-01T02:08:49
+rf,txn,"{""max_depth"": null, ""min_samples_leaf"": 5}",0.790823,,,29,,,False,2026-11-04T13:14:36
 lr,txn_graph,"{""C"": 1}",0.909442,,,52,7.0,eaa8d30750,False,2026-11-01T01:39:48
 mlp,txn_graph,"{""hidden_layer_sizes"": [32], ""alpha"": 0.0001}",0.943711,0.002568,,52,7.0,eaa8d30750,False,2026-11-01T01:40:31
 lgbm,txn_graph,"{""num_leaves"": 63, ""learning_rate"": 0.05, ""min_child_samples"": 100}",0.950828,,209.0,52,7.0,eaa8d30750,False,2026-11-01T01:41:16
+rf,txn_graph,"{""max_depth"": null, ""min_samples_leaf"": 1}",0.943952,,,52,7.0,eaa8d30750,False,2026-11-04T13:15:40
 lr,txn_graph_g1g3,"{""C"": 1}",0.782243,,,42,7.0,eaa8d30750,False,2026-11-01T01:37:05
 lgbm,txn_graph_g1g3,"{""num_leaves"": 63, ""learning_rate"": 0.1, ""min_child_samples"": 100}",0.882438,,72.0,42,7.0,eaa8d30750,False,2026-11-01T01:37:50

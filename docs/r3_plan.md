@@ -14,6 +14,8 @@ Seven work items, all doable before R4's metrics code exists:
 | 6 | Case-study selection script | **mock scores now**, real later | Fri 13 Nov |
 | 7 | §4.1 results-table script and section skeleton | **mock table now**, real later | Mon 16 Nov |
 
+**Item 8 (added 4 Nov): Random Forest** as a robustness model; spec in `docs/plan.md`, "Added after proposal feedback", item B. Due: code by Fri 6 Nov, group OK by Sun 8 Nov.
+
 Build order: Phase 0 → Phase 1 (`train.py`, shared by items 1–3) → items 1, 2, 3 → items 4, 6, 7 → item 5 in any gap.
 
 ---

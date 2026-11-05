@@ -13,7 +13,7 @@ import numpy as np
 
 from src.config import ROOT, SEED
 from src.models.data import load_splits
-from src.models.grids import MODELS
+from src.models.grids import MAIN_MODELS
 from src.models.train import write_scores
 
 MOCK_DIR = ROOT / "reports" / "scores_mock"
@@ -30,7 +30,7 @@ def write_mock(out=MOCK_DIR, splits=("val", "test"), seed=SEED):
     parts = load_splits(list(splits))
     written = []
     for name, df in parts.items():
-        for m in MODELS:
+        for m in MAIN_MODELS:
             for fs, signal in [("txn", 2.0), ("txn_graph", 2.6)]:
                 path = out / f"{m}_{fs}_{name}.parquet"
                 write_scores(df.txn_id, mock_scores(df.fraud, signal, rng), path)

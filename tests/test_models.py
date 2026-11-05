@@ -195,3 +195,46 @@ def test_lgbm_runs_if_available(run_toy, monkeypatch):
     row = go("lgbm", "txn_graph")
     assert row["best_iteration"] >= 1
     assert (tmp / "scores" / "lgbm_txn_graph_val.parquet").exists()
+
+
+# --- random forest (robustness model, added after proposal feedback) ------------
+
+@pytest.fixture
+def run_rf(run_toy, monkeypatch):
+    go, tmp, splits = run_toy
+    monkeypatch.setitem(T.grid_points.__globals__["GRIDS"], "rf",
+                        {"max_depth": [4, None], "min_samples_leaf": [5]})
+    monkeypatch.setattr("src.models.grids.RF_TREES", 20)
+    return go, tmp, splits
+
+
+def test_rf_follows_the_score_contract(run_rf):
+    go, tmp, splits = run_rf
+    row = go("rf", "txn_graph")
+    s = pd.read_parquet(tmp / "scores" / "rf_txn_graph_val.parquet")
+    assert list(s.columns) == ["txn_id", "score"]
+    assert set(s.txn_id) == set(splits["val"].txn_id) and s.txn_id.is_unique
+    assert s.score.between(0, 1).all()
+    assert not (tmp / "scores" / "rf_txn_graph_test.parquet").exists()      # no test without the flag
+    assert row["model"] == "rf" and 0 <= row["val_pr_auc"] <= 1
+
+
+def test_rf_uses_raw_graph_columns_like_lightgbm(run_rf):
+    """Trees don't need scaling, so RF gets unscaled graph features (and is not given a scaler)."""
+    go, tmp, _ = run_rf
+    go("rf", "txn_graph")
+    art = __import__("joblib").load(tmp / "models" / "rf_txn_graph.joblib")
+    assert art["builder"].graph_scaler is None
+
+
+def test_rf_deterministic(run_rf):
+    go, tmp, _ = run_rf
+    go("rf", "txn")
+    a = pd.read_parquet(tmp / "scores" / "rf_txn_val.parquet")
+    go("rf", "txn")
+    pd.testing.assert_frame_equal(a, pd.read_parquet(tmp / "scores" / "rf_txn_val.parquet"))
+
+
+def test_rf_is_not_in_the_main_six():
+    from src.models.grids import MAIN_MODELS, MODELS
+    assert "rf" in MODELS and "rf" not in MAIN_MODELS
