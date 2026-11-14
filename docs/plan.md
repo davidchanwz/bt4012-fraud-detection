@@ -120,8 +120,8 @@ Leakage tests (`tests/test_features.py`):
 ## Week 3 · Mon 9 Nov – Sun 15 Nov: Main experiments, then freeze
 - [x] Graph-augmented runs for all 3 models (R3, Mon 9 – Tue 10) (val done 1 Nov; rerun if graph features change)
 - [ ] Main table: 3 models × {txn, txn+graph} on test with CIs and paired differences (R4)
-- [ ] Ablation: all minus one group at a time, plus label-free (G1–G4) vs labels-only (G5). Use LR + LightGBM (R2)
-- [ ] Label delay: 7-day vs 1-day G5 (R2)
+- [x] Ablation: all minus one group at a time, plus label-free (G1–G4) vs labels-only (G5). Use LR + LightGBM (R2) (val done 14 Nov: `src/models/run_ablation.py`, `results_ablation_*_val.csv`, notes in `docs/r2_ablation_notes.md`; test at the freeze with `--score-test`)
+- [x] Label delay: 7-day vs 1-day G5 (R2) (val done 14 Nov: `results_delay_*_val.csv`; test at the freeze)
 - [ ] Subgroup: recall at threshold and at budget on primary (400 test cases) and strict (164), bootstrap CIs, 90th-percentile sensitivity check (R4)
 - [ ] False-positive burden: legit rows in each 1% / 2% queue, and how many are normal-looking (R4)
 - [ ] Interpretation: LR coefficients, SHAP for LightGBM; 3–4 case studies of fraud caught only by the graph model (R3)
@@ -144,7 +144,7 @@ A UI is rewarded, but it must never put the required deliverables at risk.
 - [x] Shell: `app/main.py` (sidebar + six tabs), `app/data.py` (read-only loaders, missing file = empty state), `app/ui.py` (palette, chart style, tiles), `.streamlit/config.toml`, `tests/app_check.py` (renders every tab under every sidebar selection, with and without the tables)
 - [x] Tabs 1, 2, 4, 5 on real val data; tabs 3 and 6 with interim content until item A and R2's ablation exist (4 Nov; each tab reviewed against the CSVs; `tests/test_app.py` in the suite)
 - [x] Tab 3 full view from R4's item-A tables (`normal_looking_comparison.csv`, `normal_looking_category_mix.csv`, figure 07; merged 4 Nov, PR #8): category mix, SMD against all normal-looking legit and against same-category legit, per-feature detail
-- [ ] Tab 6 full view: needs R2's evaluated ablation and label-delay results (`metrics.py ... --name ablation`; the app reads any results family with non-standard feature sets)
+- [x] Tab 6 full view: needs R2's evaluated ablation and label-delay results (val results landed 14 Nov; `tests/app_check.py` renders the tab under all 48 selections) (`metrics.py ... --name ablation`; the app reads any results family with non-standard feature sets)
 - [ ] Test split: appears once `results_main_test.csv` exists (freeze). For the case viewer on test, run in this order after `--score-test`: `uv run python -m src.models.case_studies --model lgbm --split test` (and `--budget 0.02`, and `--model lr`), then `uv run python -m src.models.interpret --model lgbm --split test` (it writes contributions only for shortlists that already exist)
 - [ ] Screenshot for the appendix and ~1 min demo clip (after the freeze)
 
