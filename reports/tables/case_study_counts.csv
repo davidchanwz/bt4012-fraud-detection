@@ -1,4 +1,7 @@
 model,split,budget,source,n_rows,n_fraud,budget_alerts,caught_both,caught_graph_only,caught_txn_only,missed_both,graph_only_normal_looking,txn_only_normal_looking
+lgbm,test,0.01,real,111306,1200,1113,825,194,23,158,170,14
+lgbm,test,0.02,real,111306,1200,2226,996,177,2,25,173,2
 lgbm,val,0.01,real,108423,1200,1084,820,195,30,155,169,20
 lgbm,val,0.02,real,108423,1200,2168,995,168,6,31,161,4
+lr,test,0.01,real,111306,1200,1113,716,252,42,190,163,7
 lr,val,0.01,real,108423,1200,1084,688,252,61,199,165,8
