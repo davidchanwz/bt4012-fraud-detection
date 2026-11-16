@@ -1,0 +1,7 @@
+model,feature_set,split,policy,n_rows,n_days,n_alerts,alerts_per_day,n_fraud,max_recall,tp,fp,fp_per_day,recall,precision,fraud_amount_caught,fraud_amount_total,amount_share,normal_looking_fraud,normal_looking_tp,normal_looking_recall,normal_looking_fp,normal_looking_strict_fraud,normal_looking_strict_tp,normal_looking_strict_recall,normal_looking_strict_fp,normal_looking_q90_fraud,normal_looking_q90_tp,normal_looking_q90_recall,normal_looking_q90_fp
+rf,txn,test,budget_1pct,111306,30,1113,37.1,1200,0.9275,836,277,9.23333,0.696667,0.751123,561979,601463,0.934352,400,85,0.2125,115,164,11,0.0670732,28,347,66,0.190202,78
+rf,txn,test,budget_2pct,111306,30,2226,74.2,1200,1,965,1261,42.0333,0.804167,0.433513,580950,601463,0.965895,400,175,0.4375,976,164,35,0.213415,341,347,137,0.394813,830
+rf,txn,test,val_f1_threshold,111306,30,856,28.5333,1200,0.713333,752,104,3.46667,0.626667,0.878505,544276,601463,0.90492,400,44,0.11,33,164,3,0.0182927,9,347,31,0.0893372,28
+rf,txn_graph,test,budget_1pct,111306,30,1113,37.1,1200,0.9275,1010,103,3.43333,0.841667,0.907457,583070,601463,0.969419,400,234,0.585,78,164,65,0.396341,36,347,197,0.567723,67
+rf,txn_graph,test,budget_2pct,111306,30,2226,74.2,1200,1,1176,1050,35,0.98,0.528302,600067,601463,0.997679,400,377,0.9425,911,164,149,0.908537,437,347,325,0.936599,817
+rf,txn_graph,test,val_f1_threshold,111306,30,1147,38.2333,1200,0.955833,1029,118,3.93333,0.8575,0.897123,585535,601463,0.973518,400,248,0.62,87,164,73,0.445122,38,347,210,0.605187,74
