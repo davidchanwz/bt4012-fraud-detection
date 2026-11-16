@@ -59,7 +59,8 @@ def graph_file(delay=LABEL_DELAY):
 def graph_code_hash():
     """Short hash of src/features/graph.py, so a score file can be traced to the feature code."""
     path = ROOT / "src" / "features" / "graph.py"
-    return hashlib.sha1(path.read_bytes()).hexdigest()[:10]
+    # normalise line endings so a Windows checkout (CRLF) hashes the same as macOS/Linux
+    return hashlib.sha1(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()[:10]
 
 
 def load_splits(names=SPLITS):

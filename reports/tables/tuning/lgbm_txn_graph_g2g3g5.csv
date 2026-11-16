@@ -1,0 +1,13 @@
+params,val_pr_auc,best_iteration,scale_pos_weight,seconds
+"{""num_leaves"": 15, ""learning_rate"": 0.05, ""min_child_samples"": 20}",0.9410638659585269,197,77.10708333333334,14.7
+"{""num_leaves"": 15, ""learning_rate"": 0.05, ""min_child_samples"": 100}",0.9422778160810042,307,77.10708333333334,22.1
+"{""num_leaves"": 15, ""learning_rate"": 0.1, ""min_child_samples"": 20}",0.9370684580537588,101,77.10708333333334,6.3
+"{""num_leaves"": 15, ""learning_rate"": 0.1, ""min_child_samples"": 100}",0.9378221288692009,82,77.10708333333334,5.3
+"{""num_leaves"": 31, ""learning_rate"": 0.05, ""min_child_samples"": 20}",0.9397442978726986,178,77.10708333333334,9.4
+"{""num_leaves"": 31, ""learning_rate"": 0.05, ""min_child_samples"": 100}",0.9417901070165637,186,77.10708333333334,14.8
+"{""num_leaves"": 31, ""learning_rate"": 0.1, ""min_child_samples"": 20}",0.9438408689117123,53,77.10708333333334,7.7
+"{""num_leaves"": 31, ""learning_rate"": 0.1, ""min_child_samples"": 100}",0.9406929695374374,91,77.10708333333334,9.5
+"{""num_leaves"": 63, ""learning_rate"": 0.05, ""min_child_samples"": 20}",0.9405443566325531,148,77.10708333333334,15.1
+"{""num_leaves"": 63, ""learning_rate"": 0.05, ""min_child_samples"": 100}",0.9397167386987024,159,77.10708333333334,9.3
+"{""num_leaves"": 63, ""learning_rate"": 0.1, ""min_child_samples"": 20}",0.938527061668796,54,77.10708333333334,4.0
+"{""num_leaves"": 63, ""learning_rate"": 0.1, ""min_child_samples"": 100}",0.9378105951334332,74,77.10708333333334,8.3

@@ -66,7 +66,12 @@ uv run python -m src.models.train --model lgbm --features txn_graph --groups g1,
 uv run python -m src.models.interpret --model lgbm   # feature contributions (val)
 uv run python -m src.models.case_studies --model lgbm --split val   # graph-only catches
 uv run python -m src.models.run_main --score-test    # at the freeze only
+uv run python -m src.models.run_ablation             # R2: ablation + label delay, train and evaluate on val
+uv run python -m src.models.run_ablation --score-test                # at the freeze: also test scores
+uv run python -m src.models.run_ablation --eval-only --split test    # then evaluate them on test
 ```
+
+`run_ablation` retrains LR and LightGBM on each graph variant with the same grids: all groups minus one (G1, G2, G3 or G5), labels only (G5), and the 1-day label delay. "Minus G5" is the label-free set (G1–G3; G4 isn't built). It needs the main `txn` and `txn_graph` runs first, because those are the reference rows. It writes `results_ablation_*` (paired: each variant vs `txn_graph`, plus label-free and labels-only vs `txn`) and `results_delay_*` (paired: 1-day vs 7-day).
 
 Each run writes `reports/scores/{model}_{feature_set}_{split}.parquet` (`txn_id, score`) and a row in `reports/tables/hyperparams.csv`. Test scores are only written with `--score-test`. Fitted models go to `models/` (gitignored).
 
@@ -130,6 +135,7 @@ src/
                        g3 customer-merchant edge, g5 past labels) + GraphScaler
   models/train.py      train + tune one model on one feature set -> scores, hyperparams
   models/run_main.py   the six main runs in one command
+  models/run_ablation.py  R2's ablation and label-delay runs (train + evaluate)
   models/interpret.py  LR coefficients, LightGBM contributions
   models/case_studies.py  fraud caught by the graph model only (shortlist)
   models/results_table.py §4.1 table from R4's results CSVs

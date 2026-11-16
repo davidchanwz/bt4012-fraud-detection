@@ -7,5 +7,17 @@ lr,txn_graph,"{""C"": 1}",0.909442,,,52,7.0,eaa8d30750,False,2026-11-01T01:39:48
 mlp,txn_graph,"{""hidden_layer_sizes"": [32], ""alpha"": 0.0001}",0.943711,0.002568,,52,7.0,eaa8d30750,False,2026-11-01T01:40:31
 lgbm,txn_graph,"{""num_leaves"": 63, ""learning_rate"": 0.05, ""min_child_samples"": 100}",0.950828,,209.0,52,7.0,eaa8d30750,False,2026-11-01T01:41:16
 rf,txn_graph,"{""max_depth"": null, ""min_samples_leaf"": 1}",0.943952,,,52,7.0,eaa8d30750,False,2026-11-04T13:15:40
+lr,txn_graph_delay1,"{""C"": 10}",0.907265,,,52,1.0,eaa8d30750,False,2026-11-14T16:12:37
+lgbm,txn_graph_delay1,"{""num_leaves"": 63, ""learning_rate"": 0.1, ""min_child_samples"": 100}",0.951742,,65.0,52,1.0,eaa8d30750,False,2026-11-14T16:26:27
+lr,txn_graph_g1g2g3,"{""C"": 1}",0.900233,,,48,7.0,eaa8d30750,False,2026-11-14T16:11:19
+lgbm,txn_graph_g1g2g3,"{""num_leaves"": 15, ""learning_rate"": 0.05, ""min_child_samples"": 100}",0.946533,,309.0,48,7.0,eaa8d30750,False,2026-11-14T16:22:41
+lr,txn_graph_g1g2g5,"{""C"": 1}",0.908189,,,48,7.0,eaa8d30750,False,2026-11-14T16:10:16
+lgbm,txn_graph_g1g2g5,"{""num_leaves"": 31, ""learning_rate"": 0.05, ""min_child_samples"": 100}",0.951659,,211.0,48,7.0,eaa8d30750,False,2026-11-14T16:19:54
 lr,txn_graph_g1g3,"{""C"": 1}",0.782243,,,42,7.0,eaa8d30750,False,2026-11-01T01:37:05
 lgbm,txn_graph_g1g3,"{""num_leaves"": 63, ""learning_rate"": 0.1, ""min_child_samples"": 100}",0.882438,,72.0,42,7.0,eaa8d30750,False,2026-11-01T01:37:50
+lr,txn_graph_g1g3g5,"{""C"": 0.1}",0.88506,,,46,7.0,eaa8d30750,False,2026-11-14T16:09:43
+lgbm,txn_graph_g1g3g5,"{""num_leaves"": 63, ""learning_rate"": 0.05, ""min_child_samples"": 20}",0.948111,,223.0,46,7.0,eaa8d30750,False,2026-11-14T16:17:38
+lr,txn_graph_g2g3g5,"{""C"": 100}",0.902672,,,43,7.0,eaa8d30750,False,2026-11-14T16:09:22
+lgbm,txn_graph_g2g3g5,"{""num_leaves"": 31, ""learning_rate"": 0.1, ""min_child_samples"": 20}",0.943841,,53.0,43,7.0,eaa8d30750,False,2026-11-14T16:14:47
+lr,txn_graph_g5,"{""C"": 0.01}",0.881535,,,33,7.0,eaa8d30750,False,2026-11-14T16:11:38
+lgbm,txn_graph_g5,"{""num_leaves"": 63, ""learning_rate"": 0.05, ""min_child_samples"": 100}",0.937081,,185.0,33,7.0,eaa8d30750,False,2026-11-14T16:24:47
