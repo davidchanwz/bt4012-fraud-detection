@@ -113,7 +113,7 @@ Leakage tests (`tests/test_features.py`):
 - [x] Smoke-test a txn + features-v1 run on Thu 5 Nov (done 1 Nov)
 
 ### Reproducibility (R1)
-- [ ] `python -m src.run_all` so the whole pipeline runs without bash (Windows users, markers)
+- [x] `python -m src.run_all` so the whole pipeline runs without bash (Windows users, markers) (done 5 Nov; full run on a clean clone took about 11 min, 18 steps. Not yet run on Windows)
 
 **Checkpoint Sun 8 Nov:** baseline results table reviewed, feature pipeline merged, all tests green.
 
@@ -125,7 +125,7 @@ Leakage tests (`tests/test_features.py`):
 - [ ] Subgroup: recall at threshold and at budget on primary (400 test cases) and strict (164), bootstrap CIs, 90th-percentile sensitivity check (R4)
 - [ ] False-positive burden: legit rows in each 1% / 2% queue, and how many are normal-looking (R4)
 - [ ] Interpretation: LR coefficients, SHAP for LightGBM; 3–4 case studies of fraud caught only by the graph model (R3)
-- [ ] Business integration: daily alert volume, analyst time (stated minutes-per-review assumption), fraud value caught (R1)
+- [x] Business integration: daily alert volume, analyst time (stated minutes-per-review assumption), fraud value caught (R1) (val done 5 Nov, `src/eval/business.py`; test comes with `--score-test` at the freeze)
 - [ ] Report drafts in parallel: §1–2 by Wed 11 (R1); §3.1–3.4 by Fri 13 (R2, R3, R4)
 - [ ] Slide template + storyline outline by Sat 14 (R1)
 - **Freeze results Sun 15 Nov.** Tag `v-results`. After this, bug fixes only. Every number in the report comes from `reports/tables/`.

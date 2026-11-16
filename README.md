@@ -21,6 +21,20 @@ To add a package: `uv add lightgbm` (or `uv add --dev <pkg>` for dev-only tools)
 
 No uv? `requirements.txt` is exported from the lockfile (`uv export --format requirements-txt --no-hashes --no-dev --no-emit-project > requirements.txt`). So `pip install -r requirements.txt` on Python 3.12 gets the same versions. Re-export it whenever the lockfile changes.
 
+## Reproduce everything
+
+One command, from the raw download to the results tables, with no bash needed, so it also works on Windows:
+
+```bash
+uv run python -m src.run_all                  # everything, val only
+uv run python -m src.run_all --dry-run        # list the steps, run nothing
+uv run python -m src.run_all --from eval      # restart from a stage: data, features, eda, models, eval, interpret, tests
+uv run python -m src.run_all --skip-existing  # skip steps whose outputs already exist
+uv run python -m src.run_all --score-test     # at the freeze only: also scores and evaluates test
+```
+
+Without `--score-test` the test split is never scored. With it, the run refuses to start if test score files already exist, because the protocol is to score test once. At the end it lists every file under `reports/` that differs from git, so check those before committing. Don't expect zero differences: timings in `tuning/` and `hyperparams.csv` always change, and on 5 Nov a clean-clone run reproduced the MLP, LightGBM and RF scores exactly but not LR with graph features, whose fit differs slightly between machines (near-tied grid, so `C` came out 100 rather than 1; PR-AUC 0.909 either way). R2's ablation and label-delay runs aren't included; they have their own commands.
+
 ## Reproduce week 1 (data + EDA)
 
 ```bash
@@ -74,6 +88,8 @@ Writes to `reports/tables/`:
 - `results_{name}_budget_curve_{split}.csv`: recall, precision and FP at every budget from 0.1% to 5% (point estimates), per subgroup. Feeds the figure and the UI's budget slider.
 - `results_{name}_fp_profile_{split}.csv`: the legit rows in each 1% / 2% queue by category (count, share, how many look normal, median amount, share of that category's legit rows that get queued).
 
+Business numbers for §4.5, derived only from those tables: `uv run python -m src.eval.business [--split test] [--minutes 10]` → `business_{split}.csv` (per model, feature set and policy: alerts and analyst hours per day, false alerts, fraud value caught) and `business_uplift_{split}.csv` (txn → txn + graph, with paired CIs). Assumes 5 minutes per review, as the dashboard does, and an 8-hour shift.
+
 Figures, drawn only from those tables: `uv run python -m src.eval.figures [--split test]` → `reports/figures/budget_curve_{split}.png` (recall against review budget, all vs normal-looking fraud, txn vs txn + graph).
 
 CIs are 95% percentile intervals from a stratified bootstrap (fraud and legit resampled separately, seed from `src/config.py`). The budget queue is the top `floor(budget × n)` rows of the whole split, ties broken by lower `txn_id`; subgroup recall at a budget is the share of that subgroup's fraud that lands in this same queue. Python helper for model selection: `from src.eval.metrics import score_predictions`.
@@ -120,7 +136,9 @@ src/
   eval/core.py         metric maths (weighted, so the bootstrap reuses it)
   eval/metrics.py      score files -> results tables with CIs (R4)
   eval/figures.py      budget-curve figure from the results tables
+  eval/business.py     alerts, analyst hours and fraud value for §4.5, from the results tables
   eda.py               figures + tables
+  run_all.py           whole pipeline in one command, in order
 app/                   Streamlit dashboard (read-only on reports/tables): main.py, data.py, ui.py, tabs/
 tests/                 pytest sanity checks (cleaning, split leakage, subgroup,
                        graph-feature leakage, model training contract)
