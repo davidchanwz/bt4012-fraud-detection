@@ -32,6 +32,7 @@ def test_score_test_covers_every_test_step():
     for module, args in [("src.eval.metrics", ("--split", "test")),
                          ("src.eval.metrics", ("--split", "test", "--name", "rf")),
                          ("src.eval.figures", ("--split", "test")),
+                         ("src.eval.business", ("--split", "test")),
                          ("src.models.results_table", ("--split", "test")),
                          ("src.models.case_studies", ("--split", "test", "lgbm", "0.02")),
                          ("src.models.case_studies", ("--split", "test", "lr")),
@@ -46,6 +47,7 @@ def test_order_respects_dependencies():
     # the plan's documented order for the case viewer: shortlists before contributions
     assert position(plan, "src.models.case_studies", "test") < position(plan, "src.models.interpret", "test")
     assert position(plan, "src.models.run_main") < position(plan, "src.eval.metrics")
+    assert position(plan, "src.eval.metrics", "test") < position(plan, "src.eval.business", "test")
     # results_table formats what metrics wrote
     assert position(plan, "src.eval.metrics", "test") < position(plan, "src.models.results_table", "test")
 
