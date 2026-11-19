@@ -17,7 +17,7 @@ import pandas as pd  # noqa: E402
 from src.config import FIG_DIR, TABLE_DIR  # noqa: E402
 
 # Reference palette (dataviz skill): categorical slots 1-2 validated as a pair; text and grid tokens.
-SERIES = {"txn_graph": ("#2a78d6", "txn + graph"), "txn": ("#eb6834", "txn only")}
+SERIES = {"txn_graph": ("#eb6834", "txn + graph"), "txn": ("#2a78d6", "txn only")}   # matches the dashboard: txn blue, graph orange
 SURFACE, TEXT, TEXT_2, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#e6e5e1"
 CEILING = "#a3a29c"   # reference line: quieter than the data, louder than the grid
 MODEL_LABELS = {"lr": "Logistic regression", "mlp": "MLP", "lgbm": "LightGBM"}
