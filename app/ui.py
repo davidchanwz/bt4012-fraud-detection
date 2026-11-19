@@ -113,12 +113,54 @@ def fs_label(fs):
 
 
 def css():
-    """A little spacing polish on top of the theme. Nothing structural."""
+    """A little spacing polish on top of the theme. Nothing structural.
+
+    Streamlit cuts metric labels, values and deltas, and badges, with "…" when they don't fit the
+    tile. Here every one of them wraps instead. Values keep one size across the app and break only
+    at spaces (an id breaks mid-number only if nothing else fits). A row made only of tiles becomes
+    an even grid that wraps to a second row, so no tile gets squeezed. The case card (customer and
+    merchant ids) has its own layout in cases.py's keyed container.
+    """
     st.html("""<style>
       .block-container {padding-top: 2.2rem; max-width: 1280px;}
       [data-testid="stMetricLabel"] p {font-size: 0.85rem; color: var(--st-secondary-text-color, inherit);}
       [data-testid="stMetricValue"] {font-weight: 600;}
       button[data-baseweb="tab"] p {font-size: 0.95rem;}
+
+      [data-testid="stMetric"] label,
+      [data-testid="stMetric"] label *,
+      [data-testid="stMetricValue"], [data-testid="stMetricValue"] *,
+      [data-testid="stMetricDelta"], [data-testid="stMetricDelta"] * {
+        overflow: visible !important; text-overflow: clip !important;
+        white-space: normal !important; overflow-wrap: break-word; height: auto !important;
+      }
+      [data-testid="stMetric"] label {align-items: flex-start; line-height: 1.3;}
+      [data-testid="stMetricValue"] {font-size: 1.6rem !important; line-height: 1.2;}
+      [data-testid="stMetricValue"] p {font-size: inherit !important;}
+      [data-testid="stMetricDelta"] {width: fit-content; max-width: 100%;}
+      [data-testid="stMarkdownContainer"] span[style*="background-color"] {
+        white-space: normal !important; display: inline-block; max-width: 100%; line-height: 1.4;
+      }
+
+      /* rows whose first and last columns each hold one tile (no nested :has, which CSS forbids): even grid, wraps to full rows instead of squeezing */
+      [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:first-child > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:only-child > [data-testid="stMetric"]):has(> [data-testid="stColumn"]:last-child > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:only-child > [data-testid="stMetric"]) {
+        display: grid !important; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 1rem;
+      }
+      [data-testid="stHorizontalBlock"]:has(> [data-testid="stColumn"]:first-child > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:only-child > [data-testid="stMetric"]):has(> [data-testid="stColumn"]:last-child > [data-testid="stVerticalBlock"] > [data-testid="stElementContainer"]:only-child > [data-testid="stMetric"]) > [data-testid="stColumn"] {
+        width: auto !important; min-width: 0 !important; flex: none !important;
+      }
+
+      /* case card: ids are 10-11 characters with no break point, so they get the wider columns;
+         when the card is narrow, day / amount / category go on one row and the two ids on the next */
+      .st-key-case_card {container-type: inline-size;}
+      .st-key-case_card [data-testid="stHorizontalBlock"] {
+        grid-template-columns: 2fr 2fr 3fr 4fr 4fr !important;
+      }
+      @container (max-width: 52rem) {
+        .st-key-case_card [data-testid="stHorizontalBlock"] {grid-template-columns: repeat(6, 1fr) !important;}
+        .st-key-case_card [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(-n+3) {grid-column: span 2;}
+        .st-key-case_card [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(n+4) {grid-column: span 3;}
+      }
     </style>""")
 
 

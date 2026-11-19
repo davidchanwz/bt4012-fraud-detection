@@ -227,7 +227,7 @@ def overview(model, split, pct, cnt, sel_subset="all"):
 
 
 def case_card(r, split):
-    with st.container(border=True):
+    with st.container(border=True, key="case_card"):       # key: ui.css() gives the ids wider columns
         with st.container(horizontal=True, vertical_alignment="center"):
             st.markdown(f"**Transaction {int(r.txn_id)}**")
             if "normal_looking" in r.index and pd.notna(r["normal_looking"]):
